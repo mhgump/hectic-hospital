@@ -61,6 +61,15 @@ export const assetRegistry: Record<AssetId, AssetEntry> = {
     mp3Path: "assets/sounds/kenney/interface/confirmation_001.mp3",
     oggPath: "assets/sounds/kenney/interface/confirmation_001.ogg",
   },
+
+  [AssetId.SfxCaChing]: {
+    kind: "audio",
+    mp3Path: "assets/sounds/ca_ching.mp3",
+  },
+  [AssetId.BgmQuietWard]: {
+    kind: "audio",
+    mp3Path: "assets/sounds/quiet_ward_tycoon.mp3",
+  },
 };
 
 export function resolvePublicAssetUrl(path: string): string {

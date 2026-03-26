@@ -1,3 +1,7 @@
+// #region agent log
+fetch('http://127.0.0.1:7787/ingest/ff287420-bd71-42b1-a96a-cab11f8b9ea0',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'ecbfa3'},body:JSON.stringify({sessionId:'ecbfa3',location:'main.ts:TOP',message:'main.ts module started executing',data:{},timestamp:Date.now()})}).catch(()=>{});
+// #endregion
+
 import "./ui/styles.css";
 
 // ───────────────────────────────────────────────────────────────────────────────
@@ -51,6 +55,10 @@ import { trackPlay } from "./utils/trackPlay";
 import { BootState } from "./states/BootState";
 import { MenuState } from "./states/MenuState";
 import { PlayState } from "./states/PlayState";
+
+// #region agent log
+fetch('http://127.0.0.1:7787/ingest/ff287420-bd71-42b1-a96a-cab11f8b9ea0',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'ecbfa3'},body:JSON.stringify({sessionId:'ecbfa3',location:'main.ts:IMPORTS_DONE',message:'All static imports resolved successfully',data:{},timestamp:Date.now()})}).catch(()=>{});
+// #endregion
 
 const canvas = document.querySelector<HTMLCanvasElement>("#game-canvas");
 if (!canvas) {

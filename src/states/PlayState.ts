@@ -23,6 +23,9 @@ import { createNameTag, disposeNameTagUI } from "../ui/nameTag";
 import type { NameTag } from "../ui/nameTag";
 import { mountDialogueOverlay } from "../ui/dialogueOverlay";
 import type { DialogueOverlayMount, DialogueAction } from "../ui/dialogueOverlay";
+import { mountLogoOverlay } from "../ui/logoOverlay";
+import type { LogoOverlayMount } from "../ui/logoOverlay";
+import { AssetId } from "../assets/assetIds";
 import { templateGenerator } from "../game/dialogueGenerator";
 import { NPC_PRESETS } from "../hospital/npcPresets";
 import { getHospitalRooms, fetchRoomsJson, buildHospitalGeometry } from "../world/HospitalLayout";
@@ -82,6 +85,9 @@ export class PlayState implements GameState {
   private disposeWallPhysics: (() => void) | null = null;
   private wallAABBs: WallAABB[] = [];
 
+  /** Logo overlay rendered above the game scene. */
+  private logoOverlay: LogoOverlayMount | null = null;
+
   /** Dialogue overlay state — simulation is frozen while open. */
   private paused = false;
   private dialogueOverlay: DialogueOverlayMount | null = null;
@@ -90,6 +96,9 @@ export class PlayState implements GameState {
   constructor(private readonly engine: Engine) {}
 
   async enter(ctx: StateContext) {
+    // #region agent log
+    fetch('http://127.0.0.1:7787/ingest/ff287420-bd71-42b1-a96a-cab11f8b9ea0',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'ecbfa3'},body:JSON.stringify({sessionId:'ecbfa3',location:'PlayState.ts:enter',message:'PlayState.enter() called',data:{},timestamp:Date.now()})}).catch(()=>{});
+    // #endregion
     clearUiRoot();
 
     if (Runtime.e2e) {
@@ -205,6 +214,11 @@ export class PlayState implements GameState {
     this.hud.setMoney(ctx.model.money);
     this.hud.setReputation(ctx.model.reputation);
     this.hud.setTimer(ctx.model.shiftTimeLeft);
+
+    this.logoOverlay = mountLogoOverlay();
+
+    // ─── Background music ─────────────────────────────────────────────────
+    void ctx.audio.unlock().then(() => ctx.audio.playBgm(AssetId.BgmQuietWard));
 
     // ─── Havok physics (character colliders) ──────────────────────────────
     await enableHavokPhysics(scene);
@@ -413,7 +427,10 @@ export class PlayState implements GameState {
     }
   }
 
-  exit() {
+  exit(ctx: StateContext) {
+    ctx.audio.stopBgm();
+    this.logoOverlay?.teardown();
+    this.logoOverlay = null;
     this.dialogueOverlay?.teardown();
     this.dialogueOverlay = null;
     this.dialoguePatientId = null;
@@ -744,9 +761,12 @@ export class PlayState implements GameState {
         if (agent.stateTimer <= 0) {
           const success = ctx.model.resolveTreatment(patient.id);
           if (success) {
-            this.hud?.showAlert(`${patient.id} healed! +$$$`);
+            const healName = patient.displayName ?? patient.id.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+            this.hud?.showAlert(`${healName} healed! +$$$`);
+            void ctx.audio.unlock().then(() => ctx.audio.playSfx(AssetId.SfxCaChing));
           } else {
-            this.hud?.showAlert(`${patient.id} treatment failed! Lawsuit!`);
+            const failName = patient.displayName ?? patient.id.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+            this.hud?.showAlert(`${failName} treatment failed! Lawsuit!`);
           }
           // Free the room
           const room = ctx.model.rooms.find((r) => r.id === patient.assignedRoom);
@@ -1017,7 +1037,8 @@ export class PlayState implements GameState {
           patient.state = "escorted";
           this.clearAgentPath(agent); // will be tethered instead
           this.nurseGrab.nurseData.assignedPatient = patient.id;
-          this.hud?.showAlert(`Grabbed ${patient.id}! Move to a room.`);
+          const grabName = patient.displayName ?? patient.id.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+          this.hud?.showAlert(`Grabbed ${grabName}! Move to a room.`);
           break;
         }
       }

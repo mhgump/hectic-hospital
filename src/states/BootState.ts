@@ -13,7 +13,7 @@ export class BootState implements GameState {
     queueMicrotask(() => ctx.stateManager.goTo(next));
   }
 
-  exit() {
+  exit(_ctx: StateContext) {
   }
 
   getScene(): Scene | null {

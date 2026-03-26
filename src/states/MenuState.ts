@@ -18,7 +18,7 @@ export class MenuState implements GameState {
     this.teardownUi = mount.teardown;
   }
 
-  exit() {
+  exit(_ctx: StateContext) {
     this.teardownUi?.();
     this.teardownUi = null;
   }

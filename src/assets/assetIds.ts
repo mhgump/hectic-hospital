@@ -11,6 +11,9 @@ export enum AssetId {
 
   KenneySfxClick = "KenneySfxClick",
   KenneySfxPickup = "KenneySfxPickup",
+
+  SfxCaChing = "SfxCaChing",
+  BgmQuietWard = "BgmQuietWard",
 }
 
 

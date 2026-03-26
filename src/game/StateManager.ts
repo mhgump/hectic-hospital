@@ -17,7 +17,7 @@ export type StateContext = {
 export interface GameState {
   readonly key: StateKey;
   enter(ctx: StateContext): Promise<void> | void;
-  exit(): Promise<void> | void;
+  exit(ctx: StateContext): Promise<void> | void;
   getScene(): Scene | null;
 }
 
@@ -76,9 +76,10 @@ export class StateManager {
       throw new Error(`Unknown state key: ${nextKey}`);
     }
 
+    const ctx: StateContext = { stateManager: this, ...this.baseCtx };
     const prev = this.current;
     if (prev) {
-      await prev.exit();
+      await prev.exit(ctx);
       const prevScene = prev.getScene();
       if (prevScene) {
         // Ensure a full dispose for restartability.
@@ -87,7 +88,7 @@ export class StateManager {
     }
 
     this.current = next;
-    await next.enter({ stateManager: this, ...this.baseCtx });
+    await next.enter(ctx);
   }
 }
 

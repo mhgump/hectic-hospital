@@ -15,6 +15,17 @@
         <div id="ui-root"></div>
       </div>
     </div>
+    <!-- #region agent log -->
+    <script>
+      window.addEventListener('error', function(ev) {
+        fetch('http://127.0.0.1:7787/ingest/ff287420-bd71-42b1-a96a-cab11f8b9ea0',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'ecbfa3'},body:JSON.stringify({sessionId:'ecbfa3',location:'index.html:ERROR',message:'window error event',data:{msg:ev.message,filename:ev.filename,lineno:ev.lineno,colno:ev.colno,errorStr:ev.error?String(ev.error):'null',errorStack:ev.error&&ev.error.stack?ev.error.stack:'none'},timestamp:Date.now()})}).catch(function(){});
+      });
+      window.addEventListener('unhandledrejection', function(ev) {
+        var r = ev.reason;
+        fetch('http://127.0.0.1:7787/ingest/ff287420-bd71-42b1-a96a-cab11f8b9ea0',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'ecbfa3'},body:JSON.stringify({sessionId:'ecbfa3',location:'index.html:UNHANDLED_REJECTION',message:'unhandledrejection event',data:{reason:r?String(r):'null',stack:r&&r.stack?r.stack:'none',type:typeof r},timestamp:Date.now()})}).catch(function(){});
+      });
+    </script>
+    <!-- #endregion -->
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>

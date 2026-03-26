@@ -29,6 +29,9 @@ export class ErrorOverlay {
     this.lastMessage = message;
     this.el.style.display = "block";
     this.el.textContent = message;
+    // #region agent log
+    fetch('http://127.0.0.1:7787/ingest/ff287420-bd71-42b1-a96a-cab11f8b9ea0',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'ecbfa3'},body:JSON.stringify({sessionId:'ecbfa3',location:'ErrorOverlay.ts:show',message:'ErrorOverlay.show called',data:{errorMessage:message},timestamp:Date.now()})}).catch(()=>{});
+    // #endregion
   }
 
   clear() {

@@ -13,6 +13,8 @@ export type AudioManagerOptions = {
 export class AudioManager {
   private ctx: AudioContext | null = null;
   private master: GainNode | null = null;
+  private bgmGain: GainNode | null = null;
+  private bgmSource: AudioBufferSourceNode | null = null;
   private readonly buffers = new Map<string, AudioBuffer>();
   private readonly unlockElement?: HTMLElement;
   private readonly initialVolume: number;
@@ -66,6 +68,44 @@ export class AudioManager {
     src.buffer = buffer;
     src.connect(this.master);
     src.start(0);
+  }
+
+  async playBgm(assetId: AssetId, volume = 0.35): Promise<void> {
+    if (!this.ctx || !this.master) return;
+
+    this.stopBgm();
+
+    const entry = assetRegistry[assetId];
+    if (!entry || entry.kind !== "audio") {
+      throw new Error(`Asset is not audio: ${assetId}`);
+    }
+
+    const chosenPath = pickSupportedAudioPath(entry.mp3Path, entry.oggPath);
+    const url = resolvePublicAssetUrl(chosenPath);
+    const buffer = await this.getOrLoadBuffer(url);
+
+    this.bgmGain = this.ctx.createGain();
+    this.bgmGain.gain.value = volume;
+    this.bgmGain.connect(this.master);
+
+    const src = this.ctx.createBufferSource();
+    src.buffer = buffer;
+    src.loop = true;
+    src.connect(this.bgmGain);
+    src.start(0);
+    this.bgmSource = src;
+  }
+
+  stopBgm(): void {
+    if (this.bgmSource) {
+      try { this.bgmSource.stop(); } catch { /* already stopped */ }
+      this.bgmSource.disconnect();
+      this.bgmSource = null;
+    }
+    if (this.bgmGain) {
+      this.bgmGain.disconnect();
+      this.bgmGain = null;
+    }
   }
 
   private async getOrLoadBuffer(url: string): Promise<AudioBuffer> {
