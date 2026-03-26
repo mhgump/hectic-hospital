@@ -23,6 +23,11 @@ export const Tuning = {
   cameraZoomMin: 4,        // tight zoom — individual characters fill the screen
   cameraZoomMax: 35,       // wide zoom — see whole hospital
   cameraZoomSpeed: 1.5,    // ortho half-size change per scroll notch
+  cameraMousePanSensitivity: 0.06, // world units per pixel of right-click drag (unused, kept for reference)
+  cameraRotateSensitivity: 0.005,  // radians per pixel of right-click horizontal drag
+  cameraTiltSensitivity: 0.004,    // radians per pixel of left-click vertical drag
+  cameraBetaMin: 0.25,             // nearly top-down (low beta = steep overhead)
+  cameraBetaMax: 1.2,              // tilted side-on (high beta = see into rooms)
 
   // ───────────────────────────────────────────────────────────────────────────
   // Arena / Hospital

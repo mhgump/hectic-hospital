@@ -26,6 +26,8 @@ import type { DialogueOverlayMount, DialogueAction } from "../ui/dialogueOverlay
 import { templateGenerator } from "../game/dialogueGenerator";
 import { NPC_PRESETS } from "../hospital/npcPresets";
 import { getHospitalRooms, fetchRoomsJson, buildHospitalGeometry } from "../world/HospitalLayout";
+import { getWaypointMap } from "../world/hospitalWaypoints";
+import { findPath } from "../world/pathfinding";
 
 // P3: CharacterPhysics — uncomment and import once P3 pushes their module
 // import { CharacterPhysics } from "../physics/CharacterPhysics";
@@ -38,6 +40,8 @@ interface NpcAgent {
   data: Patient | Staff;
   root: TransformNode;
   moveTarget: Vector3 | null;
+  /** Remaining waypoints the NPC will walk through (set by pathfinding). */
+  path: Vector3[];
   speed: number;
   stateTimer: number; // generic timer for current action
 }
@@ -69,6 +73,8 @@ export class PlayState implements GameState {
   /** When non-null, the player is directly controlling a nurse. */
   private nurseGrab: NurseGrabState | null = null;
   private disposeHospital: (() => void) | null = null;
+  private wheelHandler: ((ev: WheelEvent) => void) | null = null;
+  private waypointMap = getWaypointMap();
 
   /** Dialogue overlay state — simulation is frozen while open. */
   private paused = false;
@@ -97,12 +103,26 @@ export class PlayState implements GameState {
       beta: Tuning.cameraBeta,
       radius: Tuning.cameraRadius,
       orthoHalfSize: Tuning.cameraOrthoHalfSize,
-      betaLimits: { min: Tuning.cameraBeta, max: Tuning.cameraBeta },
+      betaLimits: { min: Tuning.cameraBetaMin, max: Tuning.cameraBetaMax },
     });
     const camera = this.cameraRig.camera;
-    // Lock horizontal rotation so the angle stays fixed like debug_rooms
-    camera.lowerAlphaLimit = Tuning.cameraAlpha;
-    camera.upperAlphaLimit = Tuning.cameraAlpha;
+
+    // Detach default Babylon camera inputs so ArcRotateCamera doesn't fight us
+    camera.detachControl();
+
+    // ─── Mouse wheel zoom ────────────────────────────────────────────────
+    const cameraRig = this.cameraRig;
+    this.wheelHandler = (ev: WheelEvent) => {
+      ev.preventDefault();
+      const dir = ev.deltaY > 0 ? 1 : -1;
+      const cur = cameraRig.getZoom();
+      const next = Math.max(
+        Tuning.cameraZoomMin,
+        Math.min(Tuning.cameraZoomMax, cur + dir * Tuning.cameraZoomSpeed),
+      );
+      cameraRig.setZoom(next);
+    };
+    this.engine.getRenderingCanvas()?.addEventListener("wheel", this.wheelHandler, { passive: false });
 
     // ─── Lighting ────────────────────────────────────────────────────────
     scene.clearColor = new Color4(0.85, 0.92, 0.95, 1); // hospital white-blue
@@ -203,6 +223,22 @@ export class PlayState implements GameState {
         if (rt.lengthSquared() > 1e-6) rt.normalize();
         camera.target.addInPlace(rt.scale(px * panStep).add(fwd.scale(py * panStep)));
       }
+
+      // ─ Right-click drag to rotate camera horizontally ─
+      const mousePan = ctx.input.consumePanDragDelta();
+      if (mousePan.dx !== 0) {
+        camera.alpha -= mousePan.dx * Tuning.cameraRotateSensitivity;
+      }
+
+      // ─ Left-click drag up/down to tilt camera (beta) ─
+      const lookDrag = ctx.input.consumeLookDragDelta();
+      if (lookDrag.dy !== 0) {
+        camera.beta = Math.max(
+          Tuning.cameraBetaMin,
+          Math.min(Tuning.cameraBetaMax, camera.beta - lookDrag.dy * Tuning.cameraTiltSensitivity),
+        );
+      }
+
       // ─ Tap interaction ─
       const taps = ctx.input.consumeTaps();
       if (taps.length > 0) {
@@ -233,8 +269,8 @@ export class PlayState implements GameState {
                   this.releaseNurse(ctx);
                   this.grabNurse(tappedNurse.nurseAgent, tappedNurse.nurseData, ctx);
                 } else {
-                  // Move nurse to tapped point
-                  this.nurseGrab.nurseAgent.moveTarget = groundPoint.clone();
+                  // Move nurse to tapped point (pathfind through doors)
+                  this.setAgentPath(this.nurseGrab.nurseAgent, groundPoint);
                   moveMarker.position.x = groundPoint.x;
                   moveMarker.position.z = groundPoint.z;
                   moveMarker.isVisible = true;
@@ -351,6 +387,10 @@ export class PlayState implements GameState {
     this.dialogueOverlay = null;
     this.dialoguePatientId = null;
     this.paused = false;
+    if (this.wheelHandler) {
+      this.engine.getRenderingCanvas()?.removeEventListener("wheel", this.wheelHandler);
+      this.wheelHandler = null;
+    }
     this.nurseGrab = null;
     this.cameraRig?.teardown();
     this.cameraRig = null;
@@ -415,6 +455,7 @@ export class PlayState implements GameState {
         data: staff,
         root,
         moveTarget: null,
+        path: [],
         speed: def.role === "nurse" ? Tuning.nurseMoveSpeed :
                def.role === "doctor" ? Tuning.doctorMoveSpeed :
                Tuning.npcMoveSpeed,
@@ -448,6 +489,7 @@ export class PlayState implements GameState {
       data: patient,
       root,
       moveTarget: null,
+      path: [],
       speed: Tuning.patientMoveSpeed,
       stateTimer: 0,
     };
@@ -455,7 +497,7 @@ export class PlayState implements GameState {
     // Start by moving toward reception
     const receptionRoom = this.findRoom("reception");
     if (receptionRoom) {
-      agent.moveTarget = receptionRoom.entryPoint.clone();
+      this.setAgentPath(agent, receptionRoom.entryPoint);
       patient.state = "entering";
     }
 
@@ -488,7 +530,8 @@ export class PlayState implements GameState {
         const dist = to.length();
 
         if (dist < Tuning.npcArrivalThreshold) {
-          agent.moveTarget = null;
+          // Advance to next waypoint in the path, or stop
+          agent.moveTarget = agent.path.length > 0 ? agent.path.shift()! : null;
         } else {
           const dir = to.scale(1 / Math.max(dist, 1e-6));
           const speed = isGrabbedNurse ? Tuning.nurseControlSpeed : agent.speed;
@@ -535,10 +578,10 @@ export class PlayState implements GameState {
           patient.state = "waiting";
           const waitRoom = this.findRoom("waiting");
           if (waitRoom) {
-            agent.moveTarget = waitRoom.entryPoint.clone();
-            // Randomize slightly so patients don't stack
-            agent.moveTarget.x += (Math.random() - 0.5) * 3;
-            agent.moveTarget.z += (Math.random() - 0.5) * 3;
+            const jittered = waitRoom.entryPoint.clone();
+            jittered.x += (Math.random() - 0.5) * 3;
+            jittered.z += (Math.random() - 0.5) * 3;
+            this.setAgentPath(agent, jittered);
           }
         }
         break;
@@ -558,7 +601,7 @@ export class PlayState implements GameState {
           // Send nurse to walk to the patient's current position
           const nurseAgent = this.npcAgents.find((a) => a.data.id === nurse.id);
           if (nurseAgent) {
-            nurseAgent.moveTarget = agent.root.position.clone();
+            this.setAgentPath(nurseAgent, agent.root.position);
           }
         }
         break;
@@ -580,7 +623,7 @@ export class PlayState implements GameState {
 
         // Keep chasing the patient — they may still be walking to the waiting room
         if (!nurseAgent.moveTarget && nurseDist >= 1.0) {
-          nurseAgent.moveTarget = agent.root.position.clone();
+          this.setAgentPath(nurseAgent, agent.root.position);
         }
 
         if (nurseDist < 1.0) {
@@ -588,8 +631,8 @@ export class PlayState implements GameState {
           patient.state = "escorted";
           const room = ctx.model.rooms.find((r) => r.id === patient.assignedRoom);
           if (room) {
-            agent.moveTarget = room.entryPoint.clone();
-            nurseAgent.moveTarget = room.entryPoint.clone();
+            this.setAgentPath(agent, room.entryPoint);
+            this.setAgentPath(nurseAgent, room.entryPoint);
           }
         }
         break;
@@ -629,7 +672,7 @@ export class PlayState implements GameState {
           const doctorAgent = this.npcAgents.find((a) => a.data.id === doctor.id);
           const room = ctx.model.rooms.find((r) => r.id === patient.assignedRoom);
           if (doctorAgent && room) {
-            doctorAgent.moveTarget = room.entryPoint.clone();
+            this.setAgentPath(doctorAgent, room.entryPoint);
           }
         }
         break;
@@ -659,22 +702,17 @@ export class PlayState implements GameState {
             }
           }
           // Move patient to exit
-          agent.moveTarget = new Vector3(
-            0,
-            0,
-            -(Tuning.hospitalFloorDepth / 2) - 2,
-          );
+          this.setAgentPath(agent, new Vector3(
+            0, 0, -(Tuning.hospitalFloorDepth / 2) - 2,
+          ));
         }
         break;
 
       case "exiting":
-        if (!agent.moveTarget) {
-          // Set exit target if not set
-          agent.moveTarget = new Vector3(
-            0,
-            0,
-            -(Tuning.hospitalFloorDepth / 2) - 2,
-          );
+        if (!agent.moveTarget && agent.path.length === 0) {
+          this.setAgentPath(agent, new Vector3(
+            0, 0, -(Tuning.hospitalFloorDepth / 2) - 2,
+          ));
         }
         if (
           agent.root.position.z < -(Tuning.hospitalFloorDepth / 2) - 1
@@ -690,35 +728,37 @@ export class PlayState implements GameState {
 
   private tickStaffAi(_ctx: StateContext, agent: NpcAgent, _dt: number) {
     const staff = agent.data as Staff;
+    const isIdle = staff.state === "idle" && !agent.moveTarget && agent.path.length === 0;
+
     // Receptionist stays at reception
-    if (staff.role === "receptionist" && staff.state === "idle" && !agent.moveTarget) {
+    if (staff.role === "receptionist" && isIdle) {
       const recRoom = this.findRoom("reception");
       if (recRoom) {
         const dist = Vector3.Distance(agent.root.position, recRoom.position);
         if (dist > 1.5) {
-          agent.moveTarget = recRoom.position.clone();
+          this.setAgentPath(agent, recRoom.position);
         }
       }
     }
 
     // Doctor returns to office when idle
-    if (staff.role === "doctor" && staff.state === "idle" && !agent.moveTarget) {
+    if (staff.role === "doctor" && isIdle) {
       const office = this.findRoom("doctor_office");
       if (office) {
         const dist = Vector3.Distance(agent.root.position, office.position);
         if (dist > 1.5) {
-          agent.moveTarget = office.position.clone();
+          this.setAgentPath(agent, office.position);
         }
       }
     }
 
     // Nurses return to waiting area when idle
-    if (staff.role === "nurse" && staff.state === "idle" && !agent.moveTarget) {
+    if (staff.role === "nurse" && isIdle) {
       const waitRoom = this.findRoom("waiting");
       if (waitRoom) {
         const dist = Vector3.Distance(agent.root.position, waitRoom.position);
         if (dist > 2) {
-          agent.moveTarget = waitRoom.position.clone();
+          this.setAgentPath(agent, waitRoom.position);
         }
       }
     }
@@ -763,6 +803,18 @@ export class PlayState implements GameState {
     return "role" in data;
   }
 
+  /** Compute a waypoint path for the agent and start walking the first leg. */
+  private setAgentPath(agent: NpcAgent, goal: Vector3) {
+    agent.path = findPath(this.waypointMap, agent.root.position, goal);
+    agent.moveTarget = agent.path.length > 0 ? agent.path.shift()! : null;
+  }
+
+  /** Clear the agent's path and stop movement immediately. */
+  private clearAgentPath(agent: NpcAgent) {
+    agent.path.length = 0;
+    agent.moveTarget = null;
+  }
+
   // ─────────────────────────────────────────────────────────────────────────
   // Nurse grab system
   // ─────────────────────────────────────────────────────────────────────────
@@ -791,7 +843,7 @@ export class PlayState implements GameState {
 
   private grabNurse(nurseAgent: NpcAgent, nurseData: Staff, _ctx: StateContext) {
     // Pause nurse AI — player takes over movement
-    nurseAgent.moveTarget = null;
+    this.clearAgentPath(nurseAgent);
     nurseData.state = "working";
 
     this.nurseGrab = {
@@ -833,24 +885,24 @@ export class PlayState implements GameState {
         droppedInRoom.occupantId = attachedPatientData.id;
         attachedPatientData.assignedRoom = droppedInRoom.id;
         attachedPatientData.state = "assigned";
-        attachedPatientAgent.moveTarget = null;
+        this.clearAgentPath(attachedPatientAgent);
         this.hud?.showAlert(`Dropped ${attachedPatientData.id} in ${droppedInRoom.id}!`);
       } else if (droppedInRoom && droppedInRoom.occupied) {
         // Room is occupied — patient just stays where dropped, goes back to waiting
         attachedPatientData.state = "waiting";
-        attachedPatientAgent.moveTarget = null;
+        this.clearAgentPath(attachedPatientAgent);
         this.hud?.showAlert(`${droppedInRoom.id} is occupied! Patient waits here.`);
       } else {
         // Dropped in hallway — patient resumes waiting
         attachedPatientData.state = "waiting";
-        attachedPatientAgent.moveTarget = null;
+        this.clearAgentPath(attachedPatientAgent);
       }
     }
 
     // Free the nurse back to idle AI
     nurseData.state = "idle";
     nurseData.assignedPatient = null;
-    nurseAgent.moveTarget = null;
+    this.clearAgentPath(nurseAgent);
 
     const tag = this.nameTags.get(nurseData.id);
     if (tag) {
@@ -895,7 +947,7 @@ export class PlayState implements GameState {
             prevNurse.assignedPatient = null;
           }
           patient.state = "escorted";
-          agent.moveTarget = null; // will be tethered instead
+          this.clearAgentPath(agent); // will be tethered instead
           this.nurseGrab.nurseData.assignedPatient = patient.id;
           this.hud?.showAlert(`Grabbed ${patient.id}! Move to a room.`);
           break;
@@ -1025,9 +1077,10 @@ export class PlayState implements GameState {
         const waitRoom = this.findRoom("waiting");
         const agent = this.npcAgents.find((a) => a.data.id === patient.id);
         if (waitRoom && agent) {
-          agent.moveTarget = waitRoom.entryPoint.clone();
-          agent.moveTarget.x += (Math.random() - 0.5) * 3;
-          agent.moveTarget.z += (Math.random() - 0.5) * 3;
+          const jittered = waitRoom.entryPoint.clone();
+          jittered.x += (Math.random() - 0.5) * 3;
+          jittered.z += (Math.random() - 0.5) * 3;
+          this.setAgentPath(agent, jittered);
         }
         this.hud?.showAlert(`Accepted ${name}`);
         break;

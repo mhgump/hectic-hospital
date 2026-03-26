@@ -40,6 +40,13 @@ export class InputManager {
   private dragDx = 0;
   private dragDy = 0;
 
+  /** Right/middle-click drag accumulator for camera panning. */
+  private panDragPointerId: number | null = null;
+  private panDragLastX = 0;
+  private panDragLastY = 0;
+  private panDragDx = 0;
+  private panDragDy = 0;
+
   private tapDownX = 0;
   private tapDownY = 0;
   private tapDownTimeMs = 0;
@@ -67,15 +74,16 @@ export class InputManager {
     this.onPointerMove = this.onPointerMove.bind(this);
     this.onPointerUp = this.onPointerUp.bind(this);
     this.onPointerCancel = this.onPointerCancel.bind(this);
+    this.onContextMenu = this.onContextMenu.bind(this);
 
     window.addEventListener("keydown", this.onKeyDown);
     window.addEventListener("keyup", this.onKeyUp);
 
-    // Pointer events cover touch + mouse on modern browsers.
     this.element.addEventListener("pointerdown", this.onPointerDown);
     this.element.addEventListener("pointermove", this.onPointerMove);
     this.element.addEventListener("pointerup", this.onPointerUp);
     this.element.addEventListener("pointercancel", this.onPointerCancel);
+    this.element.addEventListener("contextmenu", this.onContextMenu);
   }
 
   dispose() {
@@ -85,14 +93,14 @@ export class InputManager {
     this.element.removeEventListener("pointermove", this.onPointerMove);
     this.element.removeEventListener("pointerup", this.onPointerUp);
     this.element.removeEventListener("pointercancel", this.onPointerCancel);
+    this.element.removeEventListener("contextmenu", this.onContextMenu);
   }
 
   beginFrame() {
     // IMPORTANT:
     // Do NOT clear pressed actions here. Key/pointer events can happen between frames,
     // and clearing here would drop them before gameplay/debug code reads them.
-    this.dragDx = 0;
-    this.dragDy = 0;
+    // Drag deltas are cleared by their consume* methods after being read.
   }
 
   endFrame() {
@@ -137,6 +145,14 @@ export class InputManager {
     return out;
   }
 
+  /** Right/middle-click drag delta for camera panning. */
+  consumePanDragDelta(): DragDelta {
+    const out = { dx: this.panDragDx, dy: this.panDragDy };
+    this.panDragDx = 0;
+    this.panDragDy = 0;
+    return out;
+  }
+
   private onKeyDown(ev: KeyboardEvent) {
     if (ev.repeat) return;
     this.downKeys.add(ev.code);
@@ -155,7 +171,16 @@ export class InputManager {
   }
 
   private onPointerDown(ev: PointerEvent) {
-    // Only track one active pointer for drag-to-look to keep it simple for v1.
+    // Right-click (button 2) or middle-click (button 1) → pan drag
+    if (ev.button === 2 || ev.button === 1) {
+      ev.preventDefault();
+      this.panDragPointerId = ev.pointerId;
+      this.panDragLastX = ev.clientX;
+      this.panDragLastY = ev.clientY;
+      return;
+    }
+
+    // Left-click → look drag + tap detection
     if (this.activePointerId === null) {
       this.activePointerId = ev.pointerId;
       this.dragLastX = ev.clientX;
@@ -170,6 +195,18 @@ export class InputManager {
   }
 
   private onPointerMove(ev: PointerEvent) {
+    // Pan drag (right/middle-click)
+    if (this.panDragPointerId === ev.pointerId) {
+      const dx = ev.clientX - this.panDragLastX;
+      const dy = ev.clientY - this.panDragLastY;
+      this.panDragLastX = ev.clientX;
+      this.panDragLastY = ev.clientY;
+      this.panDragDx += dx;
+      this.panDragDy += dy;
+      return;
+    }
+
+    // Left-click look drag
     const dxTap = ev.clientX - this.tapDownX;
     const dyTap = ev.clientY - this.tapDownY;
     if (dxTap * dxTap + dyTap * dyTap > this.tapMaxMovePx * this.tapMaxMovePx) {
@@ -181,9 +218,6 @@ export class InputManager {
     const dy = ev.clientY - this.dragLastY;
     this.dragLastX = ev.clientX;
     this.dragLastY = ev.clientY;
-    // Keep drag-to-look separate from tap-to-move:
-    // - small finger jitter during a tap should not rotate the camera
-    // - only start accumulating look drag after we've exceeded the tap threshold
     if (this.tapMoved) {
       this.dragDx += dx;
       this.dragDy += dy;
@@ -191,6 +225,11 @@ export class InputManager {
   }
 
   private onPointerUp(ev: PointerEvent) {
+    if (this.panDragPointerId === ev.pointerId) {
+      this.panDragPointerId = null;
+      return;
+    }
+
     if (this.activePointerId === ev.pointerId) {
       this.activePointerId = null;
     }
@@ -202,15 +241,21 @@ export class InputManager {
         clientY: ev.clientY,
         pointerType: this.tapPointerType,
       });
-      // Semantically this is a "move" intent; mapping to an action keeps the contract.
       this.pressedThisFrame.add(Action.Move);
     }
   }
 
   private onPointerCancel(ev: PointerEvent) {
+    if (this.panDragPointerId === ev.pointerId) {
+      this.panDragPointerId = null;
+    }
     if (this.activePointerId === ev.pointerId) {
       this.activePointerId = null;
     }
+  }
+
+  private onContextMenu(ev: Event) {
+    ev.preventDefault();
   }
 }
 
