@@ -105,15 +105,23 @@ export class InputManager {
   }
 
   getMoveAxis(): MoveAxis {
-    // Keyboard fallback: WASD + Arrow keys.
-    const left = this.isDown("KeyA") || this.isDown("ArrowLeft") ? 1 : 0;
-    const right = this.isDown("KeyD") || this.isDown("ArrowRight") ? 1 : 0;
-    const forward = this.isDown("KeyW") || this.isDown("ArrowUp") ? 1 : 0;
-    const back = this.isDown("KeyS") || this.isDown("ArrowDown") ? 1 : 0;
+    const left = this.isDown("KeyA") ? 1 : 0;
+    const right = this.isDown("KeyD") ? 1 : 0;
+    const forward = this.isDown("KeyW") ? 1 : 0;
+    const back = this.isDown("KeyS") ? 1 : 0;
 
     const x = right - left;
     const y = forward - back;
     return { x, y };
+  }
+
+  getCameraPanAxis(): MoveAxis {
+    const left = this.isDown("ArrowLeft") ? 1 : 0;
+    const right = this.isDown("ArrowRight") ? 1 : 0;
+    const forward = this.isDown("ArrowUp") ? 1 : 0;
+    const back = this.isDown("ArrowDown") ? 1 : 0;
+
+    return { x: right - left, y: forward - back };
   }
 
   consumeTaps(): TapEvent[] {

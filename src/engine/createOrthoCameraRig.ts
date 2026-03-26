@@ -7,6 +7,9 @@ import type { Scene } from "@babylonjs/core/scene";
 
 export type OrthoCameraRig = {
   camera: ArcRotateCamera;
+  /** Change the orthographic zoom level (smaller = more zoomed in). */
+  setZoom: (halfSize: number) => void;
+  getZoom: () => number;
   teardown: () => void;
 };
 
@@ -32,26 +35,27 @@ export function createOrthoArcRotateCameraRig(opts: {
 
   camera.mode = Camera.ORTHOGRAPHIC_CAMERA;
 
+  let currentHalfSize = opts.orthoHalfSize;
+
   const updateOrtho = () => {
     const aspect = opts.engine.getRenderWidth() / opts.engine.getRenderHeight();
-    const arenaHalfSize = opts.orthoHalfSize;
     if (aspect >= 1) {
-      camera.orthoLeft = -arenaHalfSize * aspect;
-      camera.orthoRight = arenaHalfSize * aspect;
-      camera.orthoTop = arenaHalfSize;
-      camera.orthoBottom = -arenaHalfSize;
+      camera.orthoLeft = -currentHalfSize * aspect;
+      camera.orthoRight = currentHalfSize * aspect;
+      camera.orthoTop = currentHalfSize;
+      camera.orthoBottom = -currentHalfSize;
     } else {
-      camera.orthoLeft = -arenaHalfSize;
-      camera.orthoRight = arenaHalfSize;
-      camera.orthoTop = arenaHalfSize / aspect;
-      camera.orthoBottom = -arenaHalfSize / aspect;
+      camera.orthoLeft = -currentHalfSize;
+      camera.orthoRight = currentHalfSize;
+      camera.orthoTop = currentHalfSize / aspect;
+      camera.orthoBottom = -currentHalfSize / aspect;
     }
   };
 
   updateOrtho();
   const obs: Observer<AbstractEngine> = opts.engine.onResizeObservable.add(updateOrtho);
 
-  // Lock zoom (radius), but allow rotation via drag-to-look.
+  // Lock radius — zoom is controlled via ortho half-size, not camera distance.
   camera.lowerRadiusLimit = camera.radius;
   camera.upperRadiusLimit = camera.radius;
 
@@ -64,10 +68,15 @@ export function createOrthoArcRotateCameraRig(opts: {
 
   return {
     camera,
+    setZoom(halfSize: number) {
+      currentHalfSize = halfSize;
+      updateOrtho();
+    },
+    getZoom() {
+      return currentHalfSize;
+    },
     teardown() {
       opts.engine.onResizeObservable.remove(obs);
     },
   };
 }
-
-

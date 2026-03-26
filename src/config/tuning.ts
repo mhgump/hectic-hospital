@@ -19,6 +19,10 @@ export const Tuning = {
   cameraAlpha: Math.PI / 2,
   cameraRadius: 30,
   cameraOrthoHalfSize: 18, // wider to see more of the hospital
+  cameraZoomMin: 4,        // tight zoom — individual characters fill the screen
+  cameraZoomMax: 25,       // wide zoom — see whole hospital
+  cameraZoomSpeed: 1.5,    // ortho half-size change per scroll notch
+  cameraPanSpeed: 15,       // world units/sec when panning with arrow keys
 
   // ───────────────────────────────────────────────────────────────────────────
   // Arena / Hospital

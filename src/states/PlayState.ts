@@ -120,6 +120,7 @@ export class PlayState implements GameState {
 
   /** When non-null, the player is directly controlling a nurse. */
   private nurseGrab: NurseGrabState | null = null;
+  private wheelHandler: ((e: WheelEvent) => void) | null = null;
 
   /** Dialogue overlay state — simulation is frozen while open. */
   private paused = false;
@@ -151,6 +152,19 @@ export class PlayState implements GameState {
       betaLimits: { min: 0.35, max: 1.35 },
     });
     const camera = this.cameraRig.camera;
+
+    // ─── Scroll-wheel zoom ─────────────────────────────────────────────
+    const canvas = this.engine.getRenderingCanvas();
+    if (canvas) {
+      const rig = this.cameraRig;
+      this.wheelHandler = (e: WheelEvent) => {
+        e.preventDefault();
+        const dir = Math.sign(e.deltaY);
+        const next = rig.getZoom() + dir * Tuning.cameraZoomSpeed;
+        rig.setZoom(Math.max(Tuning.cameraZoomMin, Math.min(Tuning.cameraZoomMax, next)));
+      };
+      canvas.addEventListener("wheel", this.wheelHandler, { passive: false });
+    }
 
     // ─── Lighting ────────────────────────────────────────────────────────
     scene.clearColor = new Color4(0.85, 0.92, 0.95, 1); // hospital white-blue
@@ -304,6 +318,19 @@ export class PlayState implements GameState {
       if (look.dx !== 0 || look.dy !== 0) {
         camera.alpha -= look.dx * Tuning.cameraDragSensitivity;
         camera.beta -= look.dy * Tuning.cameraDragSensitivity;
+      }
+
+      // ─ Arrow-key camera pan ─
+      const pan = ctx.input.getCameraPanAxis();
+      if (pan.x !== 0 || pan.y !== 0) {
+        const panStep = Tuning.cameraPanSpeed * dt;
+        const fwd = camera.getTarget().subtract(camera.position).normalize();
+        fwd.y = 0;
+        if (fwd.lengthSquared() > 1e-6) fwd.normalize();
+        const rt = Vector3.Cross(Vector3.Up(), fwd);
+        if (rt.lengthSquared() > 1e-6) rt.normalize();
+        const panDir = rt.scale(pan.x).add(fwd.scale(pan.y));
+        camera.target.addInPlace(panDir.scale(panStep));
       }
 
       // ─ Tap interaction ─
@@ -469,6 +496,10 @@ export class PlayState implements GameState {
     this.dialoguePatientId = null;
     this.paused = false;
     this.nurseGrab = null;
+    if (this.wheelHandler) {
+      this.engine.getRenderingCanvas()?.removeEventListener("wheel", this.wheelHandler);
+      this.wheelHandler = null;
+    }
     this.cameraRig?.teardown();
     this.cameraRig = null;
     this.hud?.teardown();
