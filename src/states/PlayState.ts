@@ -26,60 +26,10 @@ import { mountDialogueOverlay } from "../ui/dialogueOverlay";
 import type { DialogueOverlayMount, DialogueAction } from "../ui/dialogueOverlay";
 import { templateGenerator } from "../game/dialogueGenerator";
 import { NPC_PRESETS } from "../hospital/npcPresets";
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Stub interfaces for P2 and P3 systems (replace with real imports once ready)
-// ─────────────────────────────────────────────────────────────────────────────
-
-// P2: HospitalLayout — uncomment and import once P2 pushes their module
-// import { HospitalLayout } from "../world/HospitalLayout";
+import { getHospitalRooms, fetchRoomsJson, buildHospitalGeometry } from "../world/HospitalLayout";
 
 // P3: CharacterPhysics — uncomment and import once P3 pushes their module
 // import { CharacterPhysics } from "../physics/CharacterPhysics";
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Temporary room positions (P2 will replace with HospitalLayout)
-// ─────────────────────────────────────────────────────────────────────────────
-
-function createStubRooms(): Room[] {
-  return [
-    {
-      id: "reception",
-      position: new Vector3(0, 0, -10),
-      entryPoint: new Vector3(0, 0, -8),
-      occupied: false,
-      occupantId: null,
-    },
-    {
-      id: "waiting",
-      position: new Vector3(-8, 0, 0),
-      entryPoint: new Vector3(-6, 0, 0),
-      occupied: false,
-      occupantId: null,
-    },
-    {
-      id: "patient_room_1",
-      position: new Vector3(8, 0, 4),
-      entryPoint: new Vector3(6, 0, 4),
-      occupied: false,
-      occupantId: null,
-    },
-    {
-      id: "patient_room_2",
-      position: new Vector3(8, 0, -4),
-      entryPoint: new Vector3(6, 0, -4),
-      occupied: false,
-      occupantId: null,
-    },
-    {
-      id: "doctor_office",
-      position: new Vector3(-8, 0, 8),
-      entryPoint: new Vector3(-6, 0, 8),
-      occupied: false,
-      occupantId: null,
-    },
-  ];
-}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Simple NPC controller (moves toward target, used until P3 has full physics)
@@ -122,6 +72,7 @@ export class PlayState implements GameState {
   /** When non-null, the player is directly controlling a nurse. */
   private nurseGrab: NurseGrabState | null = null;
   private wheelHandler: ((e: WheelEvent) => void) | null = null;
+  private disposeHospital: (() => void) | null = null;
 
   /** Dialogue overlay state — simulation is frozen while open. */
   private paused = false;
@@ -204,27 +155,10 @@ export class PlayState implements GameState {
     floor.receiveShadows = true;
     floor.isPickable = true;
 
-    // ─── Stub room markers (P2 will replace with real geometry) ──────────
-    const rooms = createStubRooms();
-
-    const markerMat = new StandardMaterial("roomMarker", scene);
-    markerMat.diffuseColor = new Color3(0.3, 0.6, 0.9);
-    markerMat.alpha = 0.4;
-
-    for (const room of rooms) {
-      const marker = MeshBuilder.CreateBox(
-        `room_${room.id}`,
-        { width: 5, height: 0.05, depth: 5 },
-        scene,
-      );
-      marker.position.copyFrom(room.position);
-      marker.position.y = 0.03;
-      marker.material = markerMat;
-      marker.isPickable = false;
-
-      // Room label
-      // (P2 will replace with proper signage)
-    }
+    // ─── Hospital room geometry ───────────────────────────────────────────
+    const rooms = getHospitalRooms();
+    const roomsJson = await fetchRoomsJson();
+    this.disposeHospital = buildHospitalGeometry(scene, roomsJson);
 
     // ─── Player ──────────────────────────────────────────────────────────
     const playerRoot = new TransformNode("playerRoot", scene);
@@ -509,6 +443,8 @@ export class PlayState implements GameState {
     for (const tag of this.nameTags.values()) tag.dispose();
     this.nameTags.clear();
     disposeNameTagUI();
+    this.disposeHospital?.();
+    this.disposeHospital = null;
     this.scene = null;
   }
 
@@ -527,10 +463,10 @@ export class PlayState implements GameState {
   private spawnStubStaff(ctx: StateContext, scene: Scene, sg: ShadowGenerator) {
     const roles: Array<{ role: Staff["role"]; color: Color3; pos: Vector3; mass: number }> = [
       { role: "receptionist", color: new Color3(0.9, 0.7, 0.2), pos: new Vector3(0, 0, -10), mass: Tuning.defaultMass },
-      { role: "nurse", color: new Color3(1, 1, 1), pos: new Vector3(-3, 0, 0), mass: Tuning.defaultMass },
-      { role: "nurse", color: new Color3(1, 1, 1), pos: new Vector3(-4, 0, 2), mass: Tuning.defaultMass },
-      { role: "doctor", color: new Color3(0.3, 0.5, 0.9), pos: new Vector3(-8, 0, 8), mass: Tuning.defaultMass },
-      { role: "doctor", color: new Color3(0.3, 0.5, 0.9), pos: new Vector3(-6, 0, 8), mass: Tuning.defaultMass },
+      { role: "nurse", color: new Color3(1, 1, 1), pos: new Vector3(-1, 0, 2), mass: Tuning.defaultMass },
+      { role: "nurse", color: new Color3(1, 1, 1), pos: new Vector3(1, 0, 2), mass: Tuning.defaultMass },
+      { role: "doctor", color: new Color3(0.3, 0.5, 0.9), pos: new Vector3(-7, 0, 10.5), mass: Tuning.defaultMass },
+      { role: "doctor", color: new Color3(0.3, 0.5, 0.9), pos: new Vector3(7, 0, 10.5), mass: Tuning.defaultMass },
     ];
 
     let staffIdx = 0;
