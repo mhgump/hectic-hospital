@@ -19,6 +19,8 @@ import { PlayerController } from "../player/PlayerController";
 import { clearUiRoot } from "../ui/uiRoot";
 import { Runtime } from "../config/runtimeConfig";
 import type { Patient, Staff, Room, RoomId } from "../hospital/types";
+import { createNameTag, disposeNameTagUI } from "../ui/nameTag";
+import type { NameTag } from "../ui/nameTag";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Stub interfaces for P2 and P3 systems (replace with real imports once ready)
@@ -99,6 +101,7 @@ export class PlayState implements GameState {
 
   private npcAgents: NpcAgent[] = [];
   private obstacles: { center: Vector3; radius: number }[] = [];
+  private nameTags = new Map<string, NameTag>();
 
   constructor(private readonly engine: Engine) {}
 
@@ -307,8 +310,51 @@ export class PlayState implements GameState {
           if (p.patience <= 0) {
             p.patience = 0;
             p.state = "exiting";
+            // Free any room that was reserved for this patient
+            const reservedRoom = ctx.model.rooms.find((r) => r.occupantId === p.id);
+            if (reservedRoom) {
+              reservedRoom.occupied = false;
+              reservedRoom.occupantId = null;
+            }
+            // Free any nurse assigned to this patient
+            const assignedNurse = ctx.model.staff.find(
+              (s) => s.assignedPatient === p.id && s.role === "nurse",
+            );
+            if (assignedNurse) {
+              assignedNurse.state = "idle";
+              assignedNurse.assignedPatient = null;
+            }
             ctx.model.addMoney(-Tuning.angryPatientPenalty);
             this.hud?.showAlert(`${p.id} left angry! -$${Tuning.angryPatientPenalty}`);
+          }
+        }
+        // Update patient name tag based on state
+        const tag = this.nameTags.get(p.id);
+        if (tag) {
+          if (p.dangerous) {
+            tag.update("DANGEROUS", "#D93636");
+          } else if (p.patience < 0.3) {
+            tag.update("ANGRY", "#D93636");
+          } else if (p.state === "in_treatment") {
+            tag.update("TREATING", "#4A7FDB");
+          } else if (p.state === "nurse_coming" || p.state === "escorted") {
+            tag.update("ESCORTED", "#D4A017");
+          } else if (p.state === "waiting") {
+            tag.update("WAITING", "#A8A8A8");
+          } else {
+            tag.update("PATIENT", "#6BBF7A");
+          }
+        }
+      }
+
+      // ─ Update staff name tags ─
+      for (const s of ctx.model.staff) {
+        const tag = this.nameTags.get(s.id);
+        if (tag) {
+          if (s.state === "working" && s.assignedPatient) {
+            tag.update(`${s.role.toUpperCase()} (BUSY)`, "#D4A017");
+          } else {
+            tag.update(s.role.toUpperCase(), s.role === "doctor" ? "#4A7FDB" : s.role === "nurse" ? "#FFFFFF" : "#DAB24E");
           }
         }
       }
@@ -333,6 +379,9 @@ export class PlayState implements GameState {
     this.player = null;
     this.npcAgents = [];
     this.obstacles = [];
+    for (const tag of this.nameTags.values()) tag.dispose();
+    this.nameTags.clear();
+    disposeNameTagUI();
     this.scene = null;
   }
 
@@ -354,6 +403,7 @@ export class PlayState implements GameState {
       { role: "nurse", color: new Color3(1, 1, 1), pos: new Vector3(-3, 0, 0), mass: Tuning.defaultMass },
       { role: "nurse", color: new Color3(1, 1, 1), pos: new Vector3(-4, 0, 2), mass: Tuning.defaultMass },
       { role: "doctor", color: new Color3(0.3, 0.5, 0.9), pos: new Vector3(-8, 0, 8), mass: Tuning.defaultMass },
+      { role: "doctor", color: new Color3(0.3, 0.5, 0.9), pos: new Vector3(-6, 0, 8), mass: Tuning.defaultMass },
     ];
 
     let staffIdx = 0;
@@ -390,6 +440,9 @@ export class PlayState implements GameState {
                Tuning.npcMoveSpeed,
         stateTimer: 0,
       });
+
+      const tag = createNameTag(scene, root, def.role.toUpperCase(), def.role);
+      this.nameTags.set(id, tag);
     }
   }
 
@@ -429,6 +482,11 @@ export class PlayState implements GameState {
     }
 
     this.npcAgents.push(agent);
+
+    const role = patient.dangerous ? "dangerous" : "patient";
+    const label = patient.dangerous ? "DANGEROUS" : "PATIENT";
+    const tag = createNameTag(scene, root, label, role);
+    this.nameTags.set(patient.id, tag);
   }
 
   // ─────────────────────────────────────────────────────────────────────────
@@ -500,53 +558,90 @@ export class PlayState implements GameState {
         break;
 
       case "waiting": {
-        // Try to get assigned to a free room
+        // Try to get a nurse + free room
         const freeRoom = ctx.model.findFreeRoom();
         const nurse = ctx.model.findIdleStaff("nurse");
         if (freeRoom && nurse) {
           freeRoom.occupied = true;
           freeRoom.occupantId = patient.id;
           patient.assignedRoom = freeRoom.id;
-          patient.state = "assigned";
+          patient.state = "nurse_coming";
           nurse.state = "working";
           nurse.assignedPatient = patient.id;
-          // Move patient to room
-          agent.moveTarget = freeRoom.entryPoint.clone();
+
+          // Send nurse to walk to the patient's current position
+          const nurseAgent = this.npcAgents.find((a) => a.data.id === nurse.id);
+          if (nurseAgent) {
+            nurseAgent.moveTarget = agent.root.position.clone();
+          }
         }
         break;
       }
 
-      case "assigned":
-        if (!agent.moveTarget) {
-          // Arrived at room, wait for doctor
-          patient.state = "in_treatment";
-          agent.stateTimer = Tuning.treatmentDurationSec;
+      case "nurse_coming": {
+        // Wait for nurse to arrive at patient
+        const escortNurse = ctx.model.staff.find(
+          (s) => s.assignedPatient === patient.id && s.role === "nurse",
+        );
+        if (!escortNurse) break;
+        const nurseAgent = this.npcAgents.find((a) => a.data.id === escortNurse.id);
+        if (!nurseAgent) break;
 
-          // Free up the nurse
-          const assignedNurse = ctx.model.staff.find(
-            (s) => s.assignedPatient === patient.id && s.role === "nurse",
-          );
-          if (assignedNurse) {
-            assignedNurse.state = "idle";
-            assignedNurse.assignedPatient = null;
-          }
-
-          // Assign a doctor
-          const doctor = ctx.model.findIdleStaff("doctor");
-          if (doctor) {
-            doctor.state = "working";
-            doctor.assignedPatient = patient.id;
-            patient.assignedDoctor = doctor.id;
-
-            // Move doctor to the room
-            const doctorAgent = this.npcAgents.find((a) => a.data.id === doctor.id);
-            const room = ctx.model.rooms.find((r) => r.id === patient.assignedRoom);
-            if (doctorAgent && room) {
-              doctorAgent.moveTarget = room.entryPoint.clone();
-            }
+        const nurseDist = Vector3.Distance(
+          nurseAgent.root.position,
+          agent.root.position,
+        );
+        if (nurseDist < 1.0) {
+          // Nurse arrived — both walk to the room together
+          patient.state = "escorted";
+          const room = ctx.model.rooms.find((r) => r.id === patient.assignedRoom);
+          if (room) {
+            agent.moveTarget = room.entryPoint.clone();
+            nurseAgent.moveTarget = room.entryPoint.clone();
           }
         }
         break;
+      }
+
+      case "escorted": {
+        // Patient and nurse walking to room together
+        if (!agent.moveTarget) {
+          // Patient arrived at room
+          patient.state = "assigned";
+        }
+        break;
+      }
+
+      case "assigned": {
+        // Arrived at room — free nurse, assign doctor
+        patient.state = "in_treatment";
+        agent.stateTimer = Tuning.treatmentDurationSec;
+
+        // Free up the nurse
+        const assignedNurse = ctx.model.staff.find(
+          (s) => s.assignedPatient === patient.id && s.role === "nurse",
+        );
+        if (assignedNurse) {
+          assignedNurse.state = "idle";
+          assignedNurse.assignedPatient = null;
+        }
+
+        // Assign a doctor
+        const doctor = ctx.model.findIdleStaff("doctor");
+        if (doctor) {
+          doctor.state = "working";
+          doctor.assignedPatient = patient.id;
+          patient.assignedDoctor = doctor.id;
+
+          // Move doctor to the room
+          const doctorAgent = this.npcAgents.find((a) => a.data.id === doctor.id);
+          const room = ctx.model.rooms.find((r) => r.id === patient.assignedRoom);
+          if (doctorAgent && room) {
+            doctorAgent.moveTarget = room.entryPoint.clone();
+          }
+        }
+        break;
+      }
 
       case "in_treatment":
         agent.stateTimer -= dt;
@@ -645,6 +740,9 @@ export class PlayState implements GameState {
   private cleanupGonePatients(ctx: StateContext) {
     const gone = ctx.model.patients.filter((p) => p.state === "gone");
     for (const p of gone) {
+      this.nameTags.get(p.id)?.dispose();
+      this.nameTags.delete(p.id);
+
       const agentIdx = this.npcAgents.findIndex((a) => a.data.id === p.id);
       if (agentIdx !== -1) {
         const agent = this.npcAgents[agentIdx]!;

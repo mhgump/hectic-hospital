@@ -47,10 +47,10 @@ export const Tuning = {
   // ───────────────────────────────────────────────────────────────────────────
   // Pipeline timing
   // ───────────────────────────────────────────────────────────────────────────
-  patientSpawnIntervalSec: 6,
+  patientSpawnIntervalSec: 10,
   receptionCheckDurationSec: 2,
-  treatmentDurationSec: 5,
-  patientPatienceDecayPerSec: 0.03, // patience drops per second while waiting
+  treatmentDurationSec: 4,
+  patientPatienceDecayPerSec: 0.012, // patience drops per second while waiting
   shiftDurationSec: 180,
 
   // ───────────────────────────────────────────────────────────────────────────

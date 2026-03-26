@@ -16,6 +16,8 @@ export type PatientState =
   | "entering"
   | "reception"
   | "waiting"
+  | "nurse_coming"   // nurse assigned, walking to patient
+  | "escorted"       // nurse + patient walking to room together
   | "assigned"
   | "in_treatment"
   | "exiting"

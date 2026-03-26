@@ -37,7 +37,7 @@ export class GameModel {
       id,
       state: "entering",
       health: 0.3 + Math.random() * 0.4, // 0.3–0.7
-      patience: 0.5 + Math.random() * 0.5, // 0.5–1.0
+      patience: 0.8 + Math.random() * 0.2, // 0.8–1.0
       dangerous,
       diagnosis,
       assignedRoom: null,
