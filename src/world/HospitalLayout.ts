@@ -189,13 +189,18 @@ export function buildHospitalGeometry(
     buildFloorAt(scene, meshes, materials, textures,
       pfx, ox, oz, w, d, layout?.floorTexture ?? hallwayFloorTex);
 
-    // All four walls always use hallway wall texture (outside edges)
+    // North and west walls use the room's interior wall texture when a layout is
+    // present (matching debug_rooms convention — these are the walls visible from
+    // the camera's SE viewpoint). South and east walls always use hallway texture.
+    const interiorWallTex = layout?.wallTexture ?? null;
     buildXWallAt(scene, meshes, materials, textures,
-      `${pfx}_n`, ox, oz + d / 2 + WALL_T / 2, w, hallwayWallTex, () => phHallway(scene));
+      `${pfx}_n`, ox, oz + d / 2 + WALL_T / 2, w,
+      interiorWallTex ?? hallwayWallTex, () => phNorthWall(scene));
     buildXWallAt(scene, meshes, materials, textures,
       `${pfx}_s`, ox, oz - d / 2 - WALL_T / 2, w, hallwayWallTex, () => phHallway(scene));
     buildZWallAt(scene, meshes, materials, textures,
-      `${pfx}_w`, ox - w / 2 - WALL_T / 2, oz, d, hallwayWallTex, () => phHallway(scene));
+      `${pfx}_w`, ox - w / 2 - WALL_T / 2, oz, d,
+      interiorWallTex ?? hallwayWallTex, () => phWestWall(scene));
     buildZWallAt(scene, meshes, materials, textures,
       `${pfx}_e`, ox + w / 2 + WALL_T / 2, oz, d, hallwayWallTex, () => phHallway(scene));
 
@@ -476,10 +481,7 @@ async function loadModelsAt(
     if (placed.length === 0) continue;
 
     if (!modelDef.model) {
-      for (const p of placed) {
-        result.push(...placeholderAt(scene, modelDef.id,
-          ox + p.position[0], p.position[1], oz + p.position[2]));
-      }
+      // Model not yet generated — skip silently rather than showing placeholder boxes
       continue;
     }
 
@@ -498,30 +500,12 @@ async function loadModelsAt(
         node.scaling.setAll(p.scale);
         result.push(...loaded.meshes);
       } catch (err) {
-        console.warn(`[HospitalLayout] Model load failed (${modelDef.model}):`, err);
-        result.push(...placeholderAt(scene, modelDef.id,
-          ox + p.position[0], p.position[1], oz + p.position[2]));
+        console.error(`[HospitalLayout] Model load failed: /${modelDef.model}`, err);
       }
     }
   }
 
   return result;
-}
-
-function placeholderAt(
-  scene: Scene,
-  id: string,
-  x: number,
-  y: number,
-  z: number,
-): AbstractMesh[] {
-  const box = MeshBuilder.CreateBox(`ph_${id}`, { size: 0.85 }, scene);
-  box.position.set(x, y + 0.425, z);
-  const mat = new StandardMaterial(`ph_${id}_mat`, scene);
-  mat.diffuseColor.set(0.18, 0.25, 0.44);
-  box.material = mat;
-  box.isPickable = false;
-  return [box];
 }
 
 // ── Material factory ──────────────────────────────────────────────────────────
@@ -538,7 +522,11 @@ function makeMat(
 ): StandardMaterial {
   const mat = new StandardMaterial(`${name}_mat`, scene);
   if (texPath) {
-    const tex = new Texture("/" + texPath, scene, false, true, Texture.TRILINEAR_SAMPLINGMODE);
+    const tex = new Texture(
+      "/" + texPath, scene, false, true, Texture.TRILINEAR_SAMPLINGMODE,
+      null,
+      (msg, ex) => console.warn(`[HospitalLayout] Texture failed to load: ${texPath}`, msg, ex),
+    );
     tex.uScale = uScale;
     tex.vScale = vScale;
     mat.diffuseTexture = tex;
@@ -566,6 +554,42 @@ function phFloor(scene: Scene): DynamicTexture {
     ctx.fillStyle = cols[(i + j) % 2]!;
     ctx.fillRect(i * c, j * c, c, c);
   }
+  t.update();
+  return t;
+}
+
+function phNorthWall(scene: Scene): DynamicTexture {
+  const size = 256;
+  const t = new DynamicTexture("ph_north_wall", { width: size, height: size }, scene, true);
+  const ctx = t.getContext() as CanvasRenderingContext2D;
+  ctx.fillStyle = "#edebe6";
+  ctx.fillRect(0, 0, size, size);
+  ctx.strokeStyle = "#c8c4bc";
+  ctx.lineWidth = 3;
+  const cols = 4; const rows = 5;
+  for (let i = 1; i < cols; i++) {
+    ctx.beginPath(); ctx.moveTo((i * size) / cols, 0); ctx.lineTo((i * size) / cols, size); ctx.stroke();
+  }
+  for (let j = 1; j < rows; j++) {
+    ctx.beginPath(); ctx.moveTo(0, (j * size) / rows); ctx.lineTo(size, (j * size) / rows); ctx.stroke();
+  }
+  t.update();
+  return t;
+}
+
+function phWestWall(scene: Scene): DynamicTexture {
+  const size = 256;
+  const t = new DynamicTexture("ph_west_wall", { width: size, height: size }, scene, true);
+  const ctx = t.getContext() as CanvasRenderingContext2D;
+  ctx.fillStyle = "#c4d0be";
+  ctx.fillRect(0, 0, size, size);
+  ctx.strokeStyle = "#b8c4b2";
+  ctx.lineWidth = 1;
+  for (let x = 8; x < size; x += 24) {
+    ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x + 4, size); ctx.stroke();
+  }
+  ctx.fillStyle = "#aabaa4";
+  ctx.fillRect(0, size - 20, size, 20);
   t.update();
   return t;
 }

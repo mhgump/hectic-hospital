@@ -71,7 +71,6 @@ export class PlayState implements GameState {
 
   /** When non-null, the player is directly controlling a nurse. */
   private nurseGrab: NurseGrabState | null = null;
-  private wheelHandler: ((e: WheelEvent) => void) | null = null;
   private disposeHospital: (() => void) | null = null;
 
   /** Dialogue overlay state — simulation is frozen while open. */
@@ -101,22 +100,12 @@ export class PlayState implements GameState {
       beta: Tuning.cameraBeta,
       radius: Tuning.cameraRadius,
       orthoHalfSize: Tuning.cameraOrthoHalfSize,
-      betaLimits: { min: 0.35, max: 1.35 },
+      betaLimits: { min: Tuning.cameraBeta, max: Tuning.cameraBeta },
     });
     const camera = this.cameraRig.camera;
-
-    // ─── Scroll-wheel zoom ─────────────────────────────────────────────
-    const canvas = this.engine.getRenderingCanvas();
-    if (canvas) {
-      const rig = this.cameraRig;
-      this.wheelHandler = (e: WheelEvent) => {
-        e.preventDefault();
-        const dir = Math.sign(e.deltaY);
-        const next = rig.getZoom() + dir * Tuning.cameraZoomSpeed;
-        rig.setZoom(Math.max(Tuning.cameraZoomMin, Math.min(Tuning.cameraZoomMax, next)));
-      };
-      canvas.addEventListener("wheel", this.wheelHandler, { passive: false });
-    }
+    // Lock horizontal rotation so the angle stays fixed like debug_rooms
+    camera.lowerAlphaLimit = Tuning.cameraAlpha;
+    camera.upperAlphaLimit = Tuning.cameraAlpha;
 
     // ─── Lighting ────────────────────────────────────────────────────────
     scene.clearColor = new Color4(0.85, 0.92, 0.95, 1); // hospital white-blue
@@ -223,50 +212,21 @@ export class PlayState implements GameState {
         // TODO: transition to results state
       }
 
-      // ─ Keyboard movement (camera-relative) ─
+      // ─ Camera pan (WASD + arrow keys) ─
       const axis = ctx.input.getMoveAxis();
-      const controlTarget = this.nurseGrab?.nurseAgent ?? null;
-      if (axis.x !== 0 || axis.y !== 0) {
-        const forward = camera.getTarget().subtract(camera.position).normalize();
-        forward.y = 0;
-        if (forward.lengthSquared() > 1e-6) forward.normalize();
-        const right = Vector3.Cross(Vector3.Up(), forward);
-        if (right.lengthSquared() > 1e-6) right.normalize();
-        const dir = right.scale(axis.x).add(forward.scale(axis.y));
-        if (controlTarget) {
-          // Keyboard moves the controlled nurse
-          controlTarget.moveTarget = null;
-          const step = Tuning.nurseControlSpeed * dt;
-          controlTarget.root.position.addInPlace(dir.scale(step));
-          const yaw = Math.atan2(dir.x, dir.z);
-          controlTarget.root.rotationQuaternion = null;
-          controlTarget.root.rotation = new Vector3(0, yaw, 0);
-        } else if (this.player) {
-          this.player.setMoveDirection(dir);
-        }
-      } else if (!controlTarget && this.player) {
-        this.player.setMoveDirection(null);
-      }
-
-      // ─ Drag-to-look ─
-      const look = ctx.input.consumeLookDragDelta();
-      if (look.dx !== 0 || look.dy !== 0) {
-        camera.alpha -= look.dx * Tuning.cameraDragSensitivity;
-        camera.beta -= look.dy * Tuning.cameraDragSensitivity;
-      }
-
-      // ─ Arrow-key camera pan ─
-      const pan = ctx.input.getCameraPanAxis();
-      if (pan.x !== 0 || pan.y !== 0) {
+      const pan  = ctx.input.getCameraPanAxis();
+      const px = axis.x + pan.x;
+      const py = axis.y + pan.y;
+      if (px !== 0 || py !== 0) {
         const panStep = Tuning.cameraPanSpeed * dt;
-        const fwd = camera.getTarget().subtract(camera.position).normalize();
+        const fwd = camera.getTarget().subtract(camera.position);
         fwd.y = 0;
         if (fwd.lengthSquared() > 1e-6) fwd.normalize();
         const rt = Vector3.Cross(Vector3.Up(), fwd);
         if (rt.lengthSquared() > 1e-6) rt.normalize();
-        const panDir = rt.scale(pan.x).add(fwd.scale(pan.y));
-        camera.target.addInPlace(panDir.scale(panStep));
+        camera.target.addInPlace(rt.scale(px * panStep).add(fwd.scale(py * panStep)));
       }
+      if (this.player) this.player.setMoveDirection(null);
 
       // ─ Tap interaction ─
       const taps = ctx.input.consumeTaps();
@@ -429,10 +389,6 @@ export class PlayState implements GameState {
     this.dialoguePatientId = null;
     this.paused = false;
     this.nurseGrab = null;
-    if (this.wheelHandler) {
-      this.engine.getRenderingCanvas()?.removeEventListener("wheel", this.wheelHandler);
-      this.wheelHandler = null;
-    }
     this.cameraRig?.teardown();
     this.cameraRig = null;
     this.hud?.teardown();

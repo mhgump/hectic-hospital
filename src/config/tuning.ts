@@ -15,14 +15,11 @@ export const Tuning = {
   // ───────────────────────────────────────────────────────────────────────────
   // Camera (top-down hospital view)
   // ───────────────────────────────────────────────────────────────────────────
-  cameraBeta: Math.PI / 3,
-  cameraAlpha: Math.PI / 2,
+  cameraBeta: Math.PI / 4,              // 45° — matches debug_rooms angle
+  cameraAlpha: -Math.PI * 5 / 12,      // ~-75° — matches debug_rooms angle
   cameraRadius: 30,
-  cameraOrthoHalfSize: 18, // wider to see more of the hospital
-  cameraZoomMin: 4,        // tight zoom — individual characters fill the screen
-  cameraZoomMax: 25,       // wide zoom — see whole hospital
-  cameraZoomSpeed: 1.5,    // ortho half-size change per scroll notch
-  cameraPanSpeed: 15,       // world units/sec when panning with arrow keys
+  cameraOrthoHalfSize: 7,              // ortho zoom level (halved = 2× zoom)
+  cameraPanSpeed: 12,                   // world units/sec when panning with WASD/arrows
 
   // ───────────────────────────────────────────────────────────────────────────
   // Arena / Hospital

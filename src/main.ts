@@ -8,6 +8,7 @@ import "./ui/styles.css";
 // (or its base) to ensure the pbr vertex/fragment shaders are registered.
 // Without this, Babylon tries to fetch shaders at runtime → Vite returns index.html
 // → WebGL compile error "syntax error: '<'".
+import "@babylonjs/loaders/glTF";
 import "@babylonjs/core/Materials/PBR/pbrMaterial";
 import "@babylonjs/core/Lights/hemisphericLight";
 import "@babylonjs/core/Lights/directionalLight";
