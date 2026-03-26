@@ -9,7 +9,7 @@ export const Tuning = {
   // ───────────────────────────────────────────────────────────────────────────
   // Physics
   // ───────────────────────────────────────────────────────────────────────────
-  physicsEnabled: false, // character physics are kinematic, not Havok
+  physicsEnabled: true, // character collisions via Havok DYNAMIC bodies
   physicsGravityY: 9.81,
 
   // ───────────────────────────────────────────────────────────────────────────
