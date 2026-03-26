@@ -36,6 +36,10 @@ import { addWallPhysics, resolveWallPenetrations } from "../physics/wallCollider
 import type { WallAABB } from "../physics/wallColliders";
 import { createCharacterBody, disposeCharacterBody } from "../physics/CharacterPhysics";
 import type { PhysicsBody } from "@babylonjs/core/Physics/v2/physicsBody";
+import type { AssetContainer } from "@babylonjs/core/assetContainer";
+import type { Skeleton } from "@babylonjs/core/Bones/skeleton";
+import { loadModelContainer } from "../assets/loaders";
+import { normalizeRootToParent } from "../world/modelNormalize";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Simple NPC controller (moves toward target, used until P3 has full physics)
@@ -50,6 +54,15 @@ interface NpcAgent {
   speed: number;
   stateTimer: number; // generic timer for current action
   facingYaw: number;  // visual facing direction (radians)
+  /** Rigged model skeletons that need explicit disposal when the agent is removed. */
+  skeletons?: Skeleton[];
+}
+
+interface CharacterContainers {
+  nurses: AssetContainer[];
+  doctors: AssetContainer[];
+  patientMales: AssetContainer[];
+  patientFemales: AssetContainer[];
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -87,6 +100,8 @@ export class PlayState implements GameState {
 
   /** Logo overlay rendered above the game scene. */
   private logoOverlay: LogoOverlayMount | null = null;
+
+  private characterContainers: CharacterContainers | null = null;
 
   /** Dialogue overlay state — simulation is frozen while open. */
   private paused = false;
@@ -154,9 +169,8 @@ export class PlayState implements GameState {
     sunLight.intensity = 0.8;
     sunLight.position = new Vector3(10, 20, 10);
 
-    const shadowGenerator = new ShadowGenerator(1024, sunLight);
-    shadowGenerator.useBlurExponentialShadowMap = true;
-    shadowGenerator.blurKernel = 32;
+    const shadowGenerator = new ShadowGenerator(512, sunLight);
+    shadowGenerator.useExponentialShadowMap = true;
     shadowGenerator.darkness = 0.3;
     (scene as any)._shadowGenerator = shadowGenerator;
 
@@ -175,6 +189,8 @@ export class PlayState implements GameState {
     floor.material = floorMat;
     floor.receiveShadows = true;
     floor.isPickable = true;
+    floorMat.freeze();
+    floor.freezeWorldMatrix();
 
     // ─── Physics ────────────────────────────────────────────────────────
     await enableHavokPhysics(scene, { gravity: new Vector3(0, 0, 0) });
@@ -217,11 +233,37 @@ export class PlayState implements GameState {
 
     this.logoOverlay = mountLogoOverlay();
 
-    // ─── Background music ─────────────────────────────────────────────────
+    // ─── Background music ────────────────────────────────────────────────────
     void ctx.audio.unlock().then(() => ctx.audio.playBgm(AssetId.BgmQuietWard));
 
-    // ─── Havok physics (character colliders) ──────────────────────────────
-    await enableHavokPhysics(scene);
+    // ─── Preload character models (gracefully skip missing files) ────
+    const tryLoad = async (id: AssetId): Promise<AssetContainer | null> => {
+      try { return await loadModelContainer(scene, id); } catch { return null; }
+    };
+    const compact = (arr: Array<AssetContainer | null>): AssetContainer[] =>
+      arr.filter((c): c is AssetContainer => c !== null);
+
+    // Load all variants, use the first that successfully loads for each type.
+    // This handles missing files gracefully while still only keeping one container per type.
+    const loadFirst = async (ids: AssetId[]): Promise<AssetContainer[]> => {
+      const results = await Promise.all(ids.map(tryLoad));
+      const loaded = compact(results);
+      // Dispose extras beyond the first to free memory
+      for (const extra of loaded.slice(1)) extra.dispose();
+      return loaded.slice(0, 1);
+    };
+
+    const [nurses, doctors, patients] = await Promise.all([
+      loadFirst([AssetId.NurseRigged0, AssetId.NurseRigged1, AssetId.NurseRigged2]),
+      loadFirst([AssetId.DoctorRigged0, AssetId.DoctorRigged1, AssetId.DoctorRigged2]),
+      loadFirst([
+        AssetId.PatientMaleRigged0, AssetId.PatientMaleRigged1, AssetId.PatientMaleRigged2,
+        AssetId.PatientFemaleRigged0, AssetId.PatientFemaleRigged1, AssetId.PatientFemaleRigged2,
+      ]),
+    ]);
+
+    this.characterContainers = { nurses, doctors, patientMales: patients, patientFemales: [] };
+    console.log(`[Characters] loaded — nurse:${nurses.length} doctor:${doctors.length} patient:${patients.length}`);
 
     // ─── Spawn initial staff (stub NPCs) ─────────────────────────────────
     this.spawnStubStaff(ctx, scene, shadowGenerator);
@@ -455,6 +497,16 @@ export class PlayState implements GameState {
     this.wallAABBs = [];
     this.disposeHospital?.();
     this.disposeHospital = null;
+    if (this.characterContainers) {
+      const all = [
+        ...this.characterContainers.nurses,
+        ...this.characterContainers.doctors,
+        ...this.characterContainers.patientMales,
+        ...this.characterContainers.patientFemales,
+      ];
+      for (const c of all) c.dispose();
+      this.characterContainers = null;
+    }
     this.scene = null;
   }
 
@@ -468,7 +520,7 @@ export class PlayState implements GameState {
 
   private spawnStubStaff(ctx: StateContext, scene: Scene, sg: ShadowGenerator) {
     const roles: Array<{ role: Staff["role"]; color: Color3; pos: Vector3; mass: number }> = [
-      { role: "receptionist", color: new Color3(0.9, 0.7, 0.2), pos: new Vector3(0, 0, -10), mass: Tuning.defaultMass },
+      { role: "receptionist", color: new Color3(0.9, 0.7, 0.2), pos: new Vector3(0, 0, -12), mass: Tuning.defaultMass },
       { role: "nurse", color: new Color3(1, 1, 1), pos: new Vector3(-1, 0, 2), mass: Tuning.defaultMass },
       { role: "nurse", color: new Color3(1, 1, 1), pos: new Vector3(1, 0, 2), mass: Tuning.defaultMass },
       { role: "doctor", color: new Color3(0.3, 0.5, 0.9), pos: new Vector3(-7, 0, 10.5), mass: Tuning.defaultMass },
@@ -480,14 +532,36 @@ export class PlayState implements GameState {
       const id = `${def.role}_${staffIdx++}`;
       const root = new TransformNode(id, scene);
       root.position.copyFrom(def.pos);
+      if (def.role === "receptionist") root.rotation.y = Math.PI;
 
-      const box = MeshBuilder.CreateBox(`${id}_vis`, { width: 0.7, height: 1.7, depth: 0.7 }, scene);
-      box.parent = root;
-      box.position.y = 0.85;
-      const mat = new StandardMaterial(`${id}_mat`, scene);
-      mat.diffuseColor = def.color;
-      box.material = mat;
-      sg.addShadowCaster(box);
+      const nurseContainers = this.characterContainers?.nurses ?? [];
+      const doctorContainers = this.characterContainers?.doctors ?? [];
+      const pool =
+        def.role === "nurse" || def.role === "receptionist" ? nurseContainers :
+        def.role === "doctor" ? doctorContainers :
+        [];
+
+      let skeletons: Skeleton[] | undefined;
+      if (pool.length > 0) {
+        const container = pool[Math.floor(Math.random() * pool.length)]!;
+        const inst = container.instantiateModelsToScene((name) => `${id}_${name}`, false);
+        skeletons = inst.skeletons.length > 0 ? inst.skeletons : undefined;
+        for (const node of inst.rootNodes) {
+          node.parent = root;
+          const meshes = node.getChildMeshes(false);
+          normalizeRootToParent({ root: node as TransformNode, meshes, desiredHeightY: 1.9125, desiredMinY: 0 });
+          for (const mesh of meshes) sg.addShadowCaster(mesh);
+        }
+      } else {
+        // Fallback: colored box (used for receptionist and if models not loaded)
+        const box = MeshBuilder.CreateBox(`${id}_vis`, { width: 0.7, height: 2.55, depth: 0.7 }, scene);
+        box.parent = root;
+        box.position.y = 1.275;
+        const mat = new StandardMaterial(`${id}_mat`, scene);
+        mat.diffuseColor = def.color;
+        box.material = mat;
+        sg.addShadowCaster(box);
+      }
 
       // Havok collider
       const body = createCharacterBody(root, scene, {
@@ -518,6 +592,7 @@ export class PlayState implements GameState {
                Tuning.npcMoveSpeed,
         stateTimer: 0,
         facingYaw: 0,
+        skeletons,
       });
 
       const tag = createNameTag(scene, root, def.role.toUpperCase(), def.role);
@@ -535,13 +610,32 @@ export class PlayState implements GameState {
     );
     patient.mesh = root;
 
-    const box = MeshBuilder.CreateBox(`${patient.id}_vis`, { width: 0.6, height: 1.5, depth: 0.6 }, scene);
-    box.parent = root;
-    box.position.y = 0.75;
-    const mat = new StandardMaterial(`${patient.id}_mat`, scene);
-    mat.diffuseColor = new Color3(0.7, 0.85, 0.7);
-    box.material = mat;
-    sg.addShadowCaster(box);
+    const allPatientContainers = [
+      ...(this.characterContainers?.patientMales ?? []),
+      ...(this.characterContainers?.patientFemales ?? []),
+    ];
+
+    let skeletons: Skeleton[] | undefined;
+    if (allPatientContainers.length > 0) {
+      const container = allPatientContainers[Math.floor(Math.random() * allPatientContainers.length)]!;
+      const inst = container.instantiateModelsToScene((name) => `${patient.id}_${name}`, false);
+      skeletons = inst.skeletons.length > 0 ? inst.skeletons : undefined;
+      for (const node of inst.rootNodes) {
+        node.parent = root;
+        const meshes = node.getChildMeshes(false);
+        normalizeRootToParent({ root: node as TransformNode, meshes, desiredHeightY: 1.6875, desiredMinY: 0 });
+        for (const mesh of meshes) sg.addShadowCaster(mesh);
+      }
+    } else {
+      // Fallback: colored box
+      const box = MeshBuilder.CreateBox(`${patient.id}_vis`, { width: 0.6, height: 2.25, depth: 0.6 }, scene);
+      box.parent = root;
+      box.position.y = 1.125;
+      const mat = new StandardMaterial(`${patient.id}_mat`, scene);
+      mat.diffuseColor = new Color3(0.7, 0.85, 0.7);
+      box.material = mat;
+      sg.addShadowCaster(box);
+    }
 
     // Havok collider
     const body = createCharacterBody(root, this.scene!, {
@@ -559,6 +653,7 @@ export class PlayState implements GameState {
       speed: Tuning.patientMoveSpeed,
       stateTimer: 0,
       facingYaw: 0,
+      skeletons,
     };
 
     // Start by moving toward reception
@@ -867,6 +962,7 @@ export class PlayState implements GameState {
       if (agentIdx !== -1) {
         const agent = this.npcAgents[agentIdx]!;
         agent.root.dispose();
+        for (const skeleton of agent.skeletons ?? []) skeleton.dispose();
         this.npcAgents.splice(agentIdx, 1);
       }
     }

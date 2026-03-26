@@ -51,6 +51,22 @@ export const assetRegistry: Record<AssetId, AssetEntry> = {
     path: "assets/models/nurse_rigged.glb",
   },
 
+  [AssetId.NurseRigged0]: { kind: "model", path: "assets/models/nurse_0_rigged.glb" },
+  [AssetId.NurseRigged1]: { kind: "model", path: "assets/models/nurse_1_rigged.glb" },
+  [AssetId.NurseRigged2]: { kind: "model", path: "assets/models/nurse_2_rigged.glb" },
+
+  [AssetId.DoctorRigged0]: { kind: "model", path: "assets/models/doctor_0_rigged.glb" },
+  [AssetId.DoctorRigged1]: { kind: "model", path: "assets/models/doctor_1_rigged.glb" },
+  [AssetId.DoctorRigged2]: { kind: "model", path: "assets/models/doctor_2_rigged.glb" },
+
+  [AssetId.PatientMaleRigged0]: { kind: "model", path: "assets/models/patient_male_0_rigged.glb" },
+  [AssetId.PatientMaleRigged1]: { kind: "model", path: "assets/models/patient_male_1_rigged.glb" },
+  [AssetId.PatientMaleRigged2]: { kind: "model", path: "assets/models/patient_male_2_rigged.glb" },
+
+  [AssetId.PatientFemaleRigged0]: { kind: "model", path: "assets/models/patient_female_0_rigged.glb" },
+  [AssetId.PatientFemaleRigged1]: { kind: "model", path: "assets/models/patient_female_1_rigged.glb" },
+  [AssetId.PatientFemaleRigged2]: { kind: "model", path: "assets/models/patient_female_2_rigged.glb" },
+
   [AssetId.KenneySfxClick]: {
     kind: "audio",
     mp3Path: "assets/sounds/kenney/interface/click_001.mp3",

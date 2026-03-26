@@ -60,6 +60,7 @@ export class GameModel {
 
   /** Tick the spawn timer. Returns a new patient if one should spawn this frame. */
   tickSpawner(dt: number): Patient | null {
+    if (this.patients.filter((p) => p.state !== "gone").length >= 5) return null;
     this.patientSpawnTimer += dt;
     if (this.patientSpawnTimer >= this.patientSpawnInterval) {
       this.patientSpawnTimer -= this.patientSpawnInterval;

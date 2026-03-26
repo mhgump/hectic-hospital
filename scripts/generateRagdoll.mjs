@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * Ragdoll-ready character pipeline:
- *   Text prompt → Realistic Textures 3.0 (reference image)
+ *   Text prompt → Grok Imagine (reference image)
  *              → Hunyuan 3D 3.1 Pro (40k faces, PBR)
  *              → Tripo Rigging 1.0 Biped (skeleton + rigged mesh)
  *              → GLB
@@ -24,8 +24,7 @@ import { post, pollJob, downloadAsset } from "./_scenario.mjs";
 import { MODELS_DIR, loadState, saveState, runHunyuan } from "./generate3d.mjs";
 
 const PROJECT_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const TEXTURE_MODEL = "model_bfl-flux-1-dev";
-const TEXTURE_LORA = "model_jM6aNXDGR2DyqujYRisjDa6r";
+const GROK_MODEL = "model_xai-grok-imagine-image";
 const RIGGING_MODEL = "model_tripo-rigging-v1";
 
 async function run() {
@@ -48,17 +47,11 @@ async function run() {
   if (fs.existsSync(refPath)) {
     console.log(`\nStep 1/4: Reference image — skipped (${path.relative(PROJECT_DIR, refPath)} exists)`);
   } else {
-    console.log("\nStep 1/4: Generating reference image (Realistic Textures 3.0)...");
-    const imgResult = await post(`/generate/custom/${TEXTURE_MODEL}`, {
-      modelId: TEXTURE_LORA,
-      loras: [TEXTURE_LORA],
-      lorasScale: [0.8],
+    console.log("\nStep 1/4: Generating reference image (Grok Imagine)...");
+    const imgResult = await post(`/generate/custom/${GROK_MODEL}`, {
       prompt,
       numOutputs: 1,
-      numInferenceSteps: 28,
-      width: 1024,
-      height: 1024,
-      guidance: 3.5,
+      aspectRatio: "1:1",
     });
     const imgJobId = imgResult.job?.jobId ?? imgResult.jobId;
     console.log(`  Job: ${imgJobId}`);

@@ -113,8 +113,8 @@ interface RoomSpec {
 const ROOM_SPECS: RoomSpec[] = [
   {
     id: "reception",
-    pos: new Vector3(0, 0, -8),
-    entryPoint: new Vector3(0, 0, -8),
+    pos: new Vector3(0, 0, -10),
+    entryPoint: new Vector3(0, 0, -10),
     roomD: RECEPTION_D,
     layoutName: "Reception",
     extWalls: ["negZ", "negX", "posX"],
@@ -212,6 +212,9 @@ export function buildHospitalGeometry(
   }
 
   // ── Per-room geometry ───────────────────────────────────────────────────────
+  // Total exterior wall stack = interior thin wall + thick exterior wall.
+  const EXT_TOT = WALL_T + EXT_WALL_T; // 0.60 — full exterior wall thickness
+
   for (const spec of ROOM_SPECS) {
     const layout = byName.get(spec.layoutName) ?? null;
     const ox  = spec.pos.x;
@@ -228,40 +231,58 @@ export function buildHospitalGeometry(
 
     // ── negZ wall  (oz − d/2 face) ────────────────────────────────────────────
     {
-      const isExt  = ext.has("negZ");
-      const wt     = isExt ? EXT_WALL_T : WALL_T;
-      const wallZ  = oz - d / 2 - wt / 2;
-      // N/S walls extend by wt on each side → gapless corners
-      const extW   = w + 2 * wt;
+      const isExt = ext.has("negZ");
+      const intZ  = oz - d / 2 - WALL_T / 2;
 
       if (isExt) {
         if (spec.isEntrance) {
+          // Interior: door opening — visible from inside reception
+          buildXWallAt(scene, meshes, materials, textures,
+            `${pfx}_s_int`, ox, intZ, w, WALL_T, WALL_T,
+            interiorWallTex ?? hallwayWallTex, () => phNorthWall(scene));
+          // Exterior: facade + glass door, pushed out past interior wall
           buildEntranceXWall(scene, meshes, materials, textures,
-            `${pfx}_s`, ox, wallZ, w, wt);
+            `${pfx}_s`, ox, oz - d / 2 - EXT_TOT + EXT_WALL_T / 2, w, EXT_WALL_T);
         } else {
+          // Interior: solid — no hallway outside, so no door
           buildSolidXWall(scene, meshes, materials, textures,
-            `${pfx}_s`, ox, wallZ, extW, wt, null, () => phExteriorWall(scene));
+            `${pfx}_s_int`, ox, intZ, w + 2 * WALL_T, WALL_T,
+            interiorWallTex ?? hallwayWallTex, () => phNorthWall(scene));
+          // Exterior: brick — extend each side only as far as that adjacent wall needs.
+          // If the adjacent E/W wall is exterior, extend by EXT_TOT to fill the thick corner;
+          // if interior, extend by only WALL_T to cover the thin interior corner.
+          const sLeftExt  = ext.has("negX") ? EXT_TOT : WALL_T;
+          const sRightExt = ext.has("posX") ? EXT_TOT : WALL_T;
+          buildSolidXWall(scene, meshes, materials, textures,
+            `${pfx}_s`, ox + (sRightExt - sLeftExt) / 2,
+            oz - d / 2 - EXT_TOT + EXT_WALL_T / 2,
+            w + sLeftExt + sRightExt, EXT_WALL_T, null, () => phExteriorWall(scene));
         }
       } else {
         buildXWallAt(scene, meshes, materials, textures,
-          `${pfx}_s`, ox, wallZ, w, wt, wt,
+          `${pfx}_s`, ox, intZ, w, WALL_T, WALL_T,
           hallwayWallTex, () => phHallway(scene));
       }
     }
 
     // ── posZ wall  (oz + d/2 face) ────────────────────────────────────────────
     {
-      const isExt  = ext.has("posZ");
-      const wt     = isExt ? EXT_WALL_T : WALL_T;
-      const wallZ  = oz + d / 2 + wt / 2;
-      const extW   = w + 2 * wt;
+      const isExt = ext.has("posZ");
+      const intZ  = oz + d / 2 + WALL_T / 2;
 
       if (isExt) {
         buildSolidXWall(scene, meshes, materials, textures,
-          `${pfx}_n`, ox, wallZ, extW, wt, null, () => phExteriorWall(scene));
+          `${pfx}_n_int`, ox, intZ, w + 2 * WALL_T, WALL_T,
+          interiorWallTex ?? hallwayWallTex, () => phNorthWall(scene));
+        const nLeftExt  = ext.has("negX") ? EXT_TOT : WALL_T;
+        const nRightExt = ext.has("posX") ? EXT_TOT : WALL_T;
+        buildSolidXWall(scene, meshes, materials, textures,
+          `${pfx}_n`, ox + (nRightExt - nLeftExt) / 2,
+          oz + d / 2 + EXT_TOT - EXT_WALL_T / 2,
+          w + nLeftExt + nRightExt, EXT_WALL_T, null, () => phExteriorWall(scene));
       } else {
         buildXWallAt(scene, meshes, materials, textures,
-          `${pfx}_n`, ox, wallZ, w, wt, wt,
+          `${pfx}_n`, ox, intZ, w, WALL_T, WALL_T,
           interiorWallTex ?? hallwayWallTex, () => phNorthWall(scene));
       }
     }
@@ -269,15 +290,18 @@ export function buildHospitalGeometry(
     // ── negX wall  (ox − w/2 face) ────────────────────────────────────────────
     {
       const isExt = ext.has("negX");
-      const wt    = isExt ? EXT_WALL_T : WALL_T;
-      const wallX = ox - w / 2 - wt / 2;
+      const intX  = ox - w / 2 - WALL_T / 2;
 
       if (isExt) {
         buildSolidZWall(scene, meshes, materials, textures,
-          `${pfx}_w`, wallX, oz, d, wt, null, () => phExteriorWall(scene));
+          `${pfx}_w_int`, intX, oz, d, WALL_T,
+          interiorWallTex ?? hallwayWallTex, () => phWestWall(scene));
+        buildSolidZWall(scene, meshes, materials, textures,
+          `${pfx}_w`, ox - w / 2 - EXT_TOT + EXT_WALL_T / 2, oz, d, EXT_WALL_T,
+          null, () => phExteriorWall(scene));
       } else {
         buildZWallAt(scene, meshes, materials, textures,
-          `${pfx}_w`, wallX, oz, d, wt,
+          `${pfx}_w`, intX, oz, d, WALL_T,
           interiorWallTex ?? hallwayWallTex, () => phWestWall(scene));
       }
     }
@@ -285,15 +309,18 @@ export function buildHospitalGeometry(
     // ── posX wall  (ox + w/2 face) ────────────────────────────────────────────
     {
       const isExt = ext.has("posX");
-      const wt    = isExt ? EXT_WALL_T : WALL_T;
-      const wallX = ox + w / 2 + wt / 2;
+      const intX  = ox + w / 2 + WALL_T / 2;
 
       if (isExt) {
         buildSolidZWall(scene, meshes, materials, textures,
-          `${pfx}_e`, wallX, oz, d, wt, null, () => phExteriorWall(scene));
+          `${pfx}_e_int`, intX, oz, d, WALL_T,
+          interiorWallTex ?? hallwayWallTex, () => phWestWall(scene));
+        buildSolidZWall(scene, meshes, materials, textures,
+          `${pfx}_e`, ox + w / 2 + EXT_TOT - EXT_WALL_T / 2, oz, d, EXT_WALL_T,
+          null, () => phExteriorWall(scene));
       } else {
         buildZWallAt(scene, meshes, materials, textures,
-          `${pfx}_e`, wallX, oz, d, wt,
+          `${pfx}_e`, intX, oz, d, WALL_T,
           hallwayWallTex, () => phHallway(scene));
       }
     }
@@ -313,9 +340,10 @@ export function buildHospitalGeometry(
   // Use room inner boundaries (oz ± d/2) so strips butt up against room floors
   // with zero gap — no grass can peek through.
 
-  // N-S central corridor: from reception south inner face to grid bottom south inner face
-  const nsZ0 = -8  + RECEPTION_D / 2;   // = -3  (reception south inner face)
-  const nsZ1 = 10.5 + GRID_D      / 2;  // = +14 (bottom row south inner face)
+  // N-S central corridor: extend by full EXT_TOT on both ends so the floor
+  // covers the base of exterior walls at both the north opening and south gap.
+  const nsZ0 = 0.5 - GRID_D / 2 - EXT_TOT;  // = -3.60
+  const nsZ1 = 10.5 + GRID_D / 2 + EXT_TOT; // = +14.60
   buildHallwayStrip(scene, meshes, materials, textures,
     0, (nsZ0 + nsZ1) / 2, 4, nsZ1 - nsZ0, hallwayFloorTex);
 
@@ -332,22 +360,21 @@ export function buildHospitalGeometry(
   // there is a gap in that face equal to the corridor width.  These solid
   // segments overlap the adjacent walls by one EXT_WALL_T to seal every gap.
   {
-    // N-S corridor (X = -2…+2) meets the grid north and south exterior faces.
-    const nsW = 4 + 2 * EXT_WALL_T;
-    const bridgeNorthZ = 0.5  - GRID_D / 2 - EXT_WALL_T / 2; // grid top   north face
-    const bridgeSouthZ = 10.5 + GRID_D / 2 + EXT_WALL_T / 2; // grid bottom south face
-    buildSolidXWall(scene, meshes, materials, textures,
-      "ext_bridge_n", 0, bridgeNorthZ, nsW, EXT_WALL_T, null, () => phExteriorWall(scene));
+    // N-S corridor meets the grid south exterior face — close that gap.
+    // The NORTH face is NOT bridged: reception's south interior wall (with door)
+    // provides the visible boundary there; bridging it would block the doorway.
+    const nsW = 4 + 2 * EXT_TOT;
+    const bridgeSouthZ = 10.5 + GRID_D / 2 + EXT_TOT - EXT_WALL_T / 2;
     buildSolidXWall(scene, meshes, materials, textures,
       "ext_bridge_s", 0, bridgeSouthZ, nsW, EXT_WALL_T, null, () => phExteriorWall(scene));
 
     // E-W corridor (Z = +4…+7) meets the grid east and west exterior faces.
     // patient_room_1/waiting east/west walls end at Z=+4;
     // doctor_office/patient_room_2 east/west walls start at Z=+7.
-    const ewD = ewZ1 - ewZ0 + 2 * EXT_WALL_T; // = 3 + 2×0.45 = 3.9
+    const ewD = ewZ1 - ewZ0 + 2 * EXT_TOT;
     const ewCZ = (ewZ0 + ewZ1) / 2;            // = 5.5
-    const bridgeEastX  =  7 + ROOM_W / 2 + EXT_WALL_T / 2; //  +12.225
-    const bridgeWestX  = -7 - ROOM_W / 2 - EXT_WALL_T / 2; //  -12.225
+    const bridgeEastX  =  7 + ROOM_W / 2 + EXT_TOT - EXT_WALL_T / 2;
+    const bridgeWestX  = -7 - ROOM_W / 2 - EXT_TOT + EXT_WALL_T / 2;
     buildSolidZWall(scene, meshes, materials, textures,
       "ext_bridge_e", bridgeEastX, ewCZ, ewD, EXT_WALL_T, null, () => phExteriorWall(scene));
     buildSolidZWall(scene, meshes, materials, textures,
@@ -549,9 +576,10 @@ function buildEntranceXWall(
   centerX: number, wallZ: number,
   roomW: number, wallT: number,
 ): void {
-  // Side panels + header using hospital facade texture
+  // Side panels + header using hospital facade texture.
+  // Extend by EXT_TOT (= WALL_T + wallT) each side to fill exterior corners.
   buildXWallAt(scene, meshes, materials, textures,
-    prefix, centerX, wallZ, roomW, wallT, wallT,
+    prefix, centerX, wallZ, roomW, wallT, WALL_T + wallT,
     null, () => phFrontWall(scene));
 
   // Glass-door plane in the opening — faces outward (−Z direction)
