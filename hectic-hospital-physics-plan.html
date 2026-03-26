@@ -1,0 +1,699 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hectic Hospital — Physics &amp; Ragdoll Plan (P3)</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+  :root {
+    --bg: #0d1117;
+    --surface: #161b22;
+    --surface-2: #1c2129;
+    --border: #30363d;
+    --text: #e6edf3;
+    --text-muted: #8b949e;
+    --accent: #00d4aa;
+    --accent-dim: #00d4aa22;
+    --accent-2: #58a6ff;
+    --orange: #f0883e;
+    --red: #f85149;
+    --green: #3fb950;
+    --purple: #bc8cff;
+    --yellow: #d29922;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Inter', -apple-system, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+    padding: 2rem;
+    max-width: 900px;
+    margin: 0 auto;
+  }
+
+  h1 { font-size: 1.8rem; font-weight: 700; margin-bottom: 0.25rem; }
+  h2 { font-size: 1.3rem; font-weight: 700; margin-bottom: 0.75rem; margin-top: 0.5rem; }
+  h3 { font-size: 1rem; font-weight: 600; margin-bottom: 0.6rem; }
+  h4 { font-size: 0.9rem; font-weight: 600; margin-bottom: 0.5rem; }
+
+  .subtitle {
+    color: var(--text-muted);
+    font-size: 0.9rem;
+    letter-spacing: 0.03em;
+    margin-bottom: 2.5rem;
+  }
+
+  .subtitle code {
+    color: var(--purple);
+    background: #bc8cff22;
+    padding: 0.15em 0.45em;
+    border-radius: 4px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.85em;
+  }
+
+  .section-label {
+    color: var(--text-muted);
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    margin-bottom: 1rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px dashed var(--border);
+  }
+
+  .divider {
+    border: none;
+    border-top: 1px solid var(--border);
+    margin: 2.5rem 0;
+  }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 1.5rem;
+    margin-bottom: 1.25rem;
+  }
+
+  .callout {
+    border: 1px solid;
+    border-radius: 8px;
+    padding: 1rem 1.25rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .callout-critical {
+    background: #2a1215;
+    border-color: #f8514944;
+    border-left: 3px solid var(--red);
+  }
+
+  .callout-info {
+    background: #1a2332;
+    border-color: #1f4068;
+    border-left: 3px solid var(--accent-2);
+  }
+
+  .callout-warn {
+    background: #1a1a0d;
+    border-color: #d2992244;
+    border-left: 3px solid var(--yellow);
+  }
+
+  .callout-success {
+    background: #0d2818;
+    border-color: #1a4028;
+    border-left: 3px solid var(--green);
+  }
+
+  .callout-purple {
+    background: #1a0d2e;
+    border-color: #bc8cff44;
+    border-left: 3px solid var(--purple);
+  }
+
+  .callout-title {
+    font-weight: 600;
+    font-size: 0.85rem;
+    margin-bottom: 0.35rem;
+  }
+
+  .callout-critical .callout-title { color: var(--red); }
+  .callout-info .callout-title { color: var(--accent-2); }
+  .callout-warn .callout-title { color: var(--yellow); }
+  .callout-success .callout-title { color: var(--green); }
+  .callout-purple .callout-title { color: var(--purple); }
+
+  .callout p, .callout li {
+    font-size: 0.9rem;
+    color: var(--text-muted);
+  }
+
+  .callout code {
+    color: var(--accent);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.85em;
+    background: var(--accent-dim);
+    padding: 0.1em 0.35em;
+    border-radius: 3px;
+  }
+
+  .callout ul, .callout ol { margin: 0.4rem 0 0 1.2rem; }
+  .callout li { margin-bottom: 0.25rem; }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 1.25rem;
+    font-size: 0.85rem;
+  }
+
+  thead th {
+    text-align: left;
+    color: var(--text-muted);
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    padding: 0.5rem 0.75rem;
+    border-bottom: 1px solid var(--border);
+  }
+
+  tbody td {
+    padding: 0.55rem 0.75rem;
+    border-bottom: 1px solid var(--border);
+    vertical-align: top;
+  }
+
+  tbody tr:last-child td { border-bottom: none; }
+
+  td code, p code {
+    color: var(--accent);
+    background: var(--accent-dim);
+    padding: 0.1em 0.4em;
+    border-radius: 4px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.82em;
+    white-space: nowrap;
+  }
+
+  .tag {
+    display: inline-block;
+    font-size: 0.65rem;
+    padding: 0.1em 0.45em;
+    border-radius: 3px;
+    margin-left: 0.4em;
+    vertical-align: middle;
+    font-weight: 500;
+  }
+
+  .tag-new { background: #0d3321; color: var(--green); }
+  .tag-rewrite { background: #3d1e00; color: var(--orange); }
+  .tag-p2 { background: #1c2541; color: var(--accent-2); }
+  .tag-p1 { background: #0d3321; color: var(--accent); }
+
+  .hour-table td:first-child {
+    white-space: nowrap;
+    font-weight: 600;
+    color: var(--purple);
+    width: 70px;
+  }
+
+  .code-block {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1.25rem;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.8rem;
+    line-height: 1.7;
+    overflow-x: auto;
+    margin-bottom: 1.25rem;
+    white-space: pre;
+  }
+
+  .code-block .kw { color: var(--purple); }
+  .code-block .type { color: var(--accent-2); }
+  .code-block .str { color: var(--green); }
+  .code-block .comment { color: var(--text-muted); }
+  .code-block .prop { color: var(--text); }
+  .code-block .val { color: var(--orange); }
+  .code-block .fn { color: var(--accent); }
+
+  .system-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 1.5rem;
+    margin-bottom: 1.25rem;
+  }
+
+  .system-card h3 {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .system-num {
+    display: inline-flex;
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    background: var(--purple);
+    color: var(--bg);
+    font-weight: 700;
+    font-size: 0.8rem;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .desc {
+    color: var(--text-muted);
+    font-size: 0.9rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .badge-p2 {
+    display: inline-block;
+    background: #1c2541;
+    color: var(--accent-2);
+    font-size: 0.7rem;
+    font-weight: 600;
+    padding: 0.15em 0.5em;
+    border-radius: 4px;
+    margin-left: 0.4em;
+  }
+
+  .badge-p1 {
+    display: inline-block;
+    background: #0d3321;
+    color: var(--accent);
+    font-size: 0.7rem;
+    font-weight: 600;
+    padding: 0.15em 0.5em;
+    border-radius: 4px;
+    margin-left: 0.4em;
+  }
+
+  .flow-diagram {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1.25rem;
+    text-align: center;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.82rem;
+    margin-bottom: 1.5rem;
+    overflow-x: auto;
+    white-space: nowrap;
+  }
+
+  .flow-diagram .step {
+    display: inline-block;
+    border-radius: 6px;
+    padding: 0.35rem 0.75rem;
+    margin: 0.25rem;
+    font-weight: 500;
+    font-size: 0.75rem;
+  }
+
+  .flow-diagram .step-physics {
+    background: #bc8cff22;
+    border: 1px solid var(--purple);
+    color: var(--purple);
+  }
+
+  .flow-diagram .step-anim {
+    background: var(--accent-dim);
+    border: 1px solid var(--accent);
+    color: var(--accent);
+  }
+
+  .flow-diagram .step-game {
+    background: #3fb95022;
+    border: 1px solid var(--green);
+    color: var(--green);
+  }
+
+  .flow-diagram .arrow {
+    color: var(--text-muted);
+    margin: 0 0.15rem;
+    font-size: 0.9rem;
+  }
+
+  .hero-banner {
+    background: linear-gradient(135deg, #1a0d2e 0%, #0d2137 100%);
+    border: 1px solid #3a2a6a;
+    border-radius: 10px;
+    padding: 1.5rem;
+    margin-bottom: 2.5rem;
+    text-align: center;
+  }
+
+  .hero-banner h3 {
+    color: var(--purple);
+    font-size: 1.1rem;
+    margin-bottom: 0.5rem;
+    justify-content: center;
+  }
+
+  .hero-banner p {
+    color: var(--text-muted);
+    font-size: 0.9rem;
+  }
+
+  .hero-banner .formula {
+    font-family: 'JetBrains Mono', monospace;
+    color: var(--purple);
+    font-size: 0.85rem;
+    margin-top: 0.75rem;
+    padding: 0.5rem 0.75rem;
+    background: #00000033;
+    border-radius: 6px;
+    display: inline-block;
+  }
+</style>
+</head>
+<body>
+
+<h1>Physics &amp; Ragdoll Plan</h1>
+<p class="subtitle"><code>P3</code> Deep-Dive &middot; Hectic Hospital &middot; Babylon.js + Havok</p>
+
+<div class="hero-banner">
+  <h3>Your Mission</h3>
+  <p>Build the ragdoll grab system — the signature mechanic that makes the game hilarious. Nurses physically grab patients, drag them around, bump into things. Patients go ragdoll when hit hard. This is what makes clips shareable.</p>
+  <div class="formula">Ragdoll chaos + 3D grab attach = comedy gold</div>
+</div>
+
+<!-- CONTEXT -->
+<div class="callout callout-warn">
+  <div class="callout-title">What P1 already built (your starting point)</div>
+  <p>P1 has a <strong>basic kinematic nurse-grab system</strong> working in <code>PlayState.ts</code>:</p>
+  <ul>
+    <li>Tap a nurse → player controls her movement</li>
+    <li>Auto-attach patient when nurse walks near → patient follows with lerp tether</li>
+    <li>Drop patient in a room → fast-tracks to treatment</li>
+  </ul>
+  <p style="margin-top: 0.5rem;"><strong>This is a placeholder.</strong> Your job is to build a physics-based version that replaces it at integration (hour 4–5). Same API contract, much better feel.</p>
+</div>
+
+<div class="callout callout-purple">
+  <div class="callout-title">Coordination with P2 (Graphics)</div>
+  <p>Your ragdoll system needs bone/skeleton data from P2's character models. Talk to P2 in the first 15 minutes:</p>
+  <ul>
+    <li>At minimum you need: <strong>torso, head, upper arm L/R, forearm L/R, upper leg L/R, lower leg L/R</strong></li>
+    <li>If P2's models don't have skeletons yet, start with <strong>box-limb ragdolls</strong> (boxes for each body part, physics joints connecting them) — you can skin them to P2's meshes later</li>
+    <li>P2 can export skeleton info via <code>mesh.skeleton.bones</code> in Babylon.js</li>
+  </ul>
+</div>
+
+<hr class="divider">
+
+<!-- 4 SYSTEMS OVERVIEW -->
+<div class="section-label">Your 4 Systems</div>
+
+<div class="flow-diagram">
+  <span class="step step-physics">Circle Colliders</span>
+  <span class="arrow">→</span>
+  <span class="step step-physics">Collision Detection</span>
+  <span class="arrow">→</span>
+  <span class="step step-physics">Mass-based Push</span>
+  <span class="arrow">→</span>
+  <span class="step step-physics">Ragdoll Trigger</span>
+  <span class="arrow">→</span>
+  <span class="step step-anim">Anim State</span>
+  <span class="arrow">→</span>
+  <span class="step step-game">Injury Event → P1</span>
+</div>
+
+<!-- SYSTEM 1: CHARACTER PHYSICS -->
+<div class="system-card">
+  <h3><span class="system-num">1</span> Character Physics <code>CharacterPhysics.ts</code></h3>
+  <p class="desc">Circle-circle collision + mass-based separation forces. This is the foundation everything else builds on.</p>
+
+  <h4>What It Does</h4>
+  <table>
+    <thead><tr><th>Feature</th><th>Detail</th></tr></thead>
+    <tbody>
+      <tr><td>Circle colliders</td><td>Each NPC has position, radius (<code>Tuning.npcColliderRadius</code>), mass, velocity</td></tr>
+      <tr><td>Overlap resolution</td><td>When two circles overlap, push them apart weighted by mass. Heavier = harder to move.</td></tr>
+      <tr><td>Knockback force</td><td>On collision: <code>force = velocity.length() * mass</code>. If above <code>Tuning.knockbackThreshold</code> → trigger ragdoll on the lighter entity.</td></tr>
+      <tr><td>Stun state</td><td>After knockback, entity is stunned for <code>Tuning.stunDurationSec</code>. Can't move.</td></tr>
+    </tbody>
+  </table>
+
+  <h4>API Contract</h4>
+  <div class="code-block"><span class="kw">export class</span> <span class="type">CharacterPhysics</span> {
+  <span class="fn">addEntity</span>(id: <span class="type">string</span>, root: <span class="type">TransformNode</span>, radius: <span class="type">number</span>, mass: <span class="type">number</span>): <span class="type">void</span>;
+  <span class="fn">removeEntity</span>(id: <span class="type">string</span>): <span class="type">void</span>;
+  <span class="fn">update</span>(dt: <span class="type">number</span>): <span class="type">void</span>;           <span class="comment">// P1 calls this every frame</span>
+  <span class="fn">onCollision</span>(cb: <span class="type">CollisionCallback</span>): <span class="type">void</span>; <span class="comment">// P1 subscribes for injury events</span>
+  <span class="fn">getEntity</span>(id: <span class="type">string</span>): <span class="type">PhysicsEntity</span> | <span class="val">undefined</span>;
+  <span class="fn">dispose</span>(): <span class="type">void</span>;
+}</div>
+
+  <div class="callout callout-info" style="margin-bottom: 0;">
+    <div class="callout-title">Implementation tip</div>
+    <p>Don't use Havok for this layer. Keep it kinematic (manual position updates). Havok is only for ragdoll bodies in System 2. This avoids fighting two physics systems.</p>
+  </div>
+</div>
+
+<!-- SYSTEM 2: RAGDOLL -->
+<div class="system-card">
+  <h3><span class="system-num">2</span> Ragdoll System <code>RagdollSystem.ts</code> <span class="badge-p2">needs P2 skeleton data</span></h3>
+  <p class="desc">When a character gets hit hard, they transition from animated mesh to a physics-driven ragdoll. This is the money shot.</p>
+
+  <h4>Two Approaches (pick based on P2's models)</h4>
+  <table>
+    <thead><tr><th>Approach</th><th>When to use</th><th>Complexity</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><strong>A: Box-limb ragdoll</strong></td>
+        <td>P2's models have no skeleton, or you want to start fast</td>
+        <td>Simpler, faster to build</td>
+      </tr>
+      <tr>
+        <td><strong>B: Skeleton-mapped ragdoll</strong></td>
+        <td>P2's models have bones/skeleton (e.g. Kenney animated characters)</td>
+        <td>Better looking, more complex</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h4>Approach A: Box-Limb Ragdoll (recommended for hackathon)</h4>
+  <p class="desc">Create physics bodies (boxes) for each limb, connect with Havok distance/ball-and-socket joints. On ragdoll trigger, hide the animated mesh, show the ragdoll bodies, copy the pose.</p>
+
+  <div class="code-block"><span class="comment">// Ragdoll bone chain (Havok physics bodies)</span>
+<span class="comment">//</span>
+<span class="comment">//         [head]          ← sphere, small mass</span>
+<span class="comment">//           |</span>
+<span class="comment">//     [L arm]─[torso]─[R arm]   ← boxes, ball-and-socket joints</span>
+<span class="comment">//           |</span>
+<span class="comment">//     [L leg]   [R leg]    ← boxes, hinge joints (knees)</span>
+<span class="comment">//</span>
+<span class="comment">// Total: 7 bodies, 6 joints</span>
+<span class="comment">// All created once per character, hidden until ragdoll triggers</span></div>
+
+  <h4>Ragdoll Lifecycle</h4>
+  <table>
+    <thead><tr><th>Phase</th><th>What happens</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Normal</strong></td><td>Animated mesh visible, ragdoll bodies hidden + kinematic (follow bone positions)</td></tr>
+      <tr><td><strong>Trigger</strong></td><td>Hide animated mesh. Enable ragdoll bodies as dynamic. Apply impact force. <code>state = "ragdoll"</code></td></tr>
+      <tr><td><strong>Ragdoll active</strong></td><td>Havok simulates. Bodies tumble. Timer counts down.</td></tr>
+      <tr><td><strong>Recovery</strong></td><td>Freeze ragdoll. Lerp animated mesh back to standing pose. Re-enable kinematic. <code>state = "idle"</code></td></tr>
+    </tbody>
+  </table>
+
+  <h4>API Contract</h4>
+  <div class="code-block"><span class="kw">export class</span> <span class="type">RagdollSystem</span> {
+  <span class="fn">createRagdoll</span>(entityId: <span class="type">string</span>, root: <span class="type">TransformNode</span>, scene: <span class="type">Scene</span>): <span class="type">void</span>;
+  <span class="fn">triggerRagdoll</span>(entityId: <span class="type">string</span>, impactForce: <span class="type">Vector3</span>): <span class="type">void</span>;
+  <span class="fn">recoverFromRagdoll</span>(entityId: <span class="type">string</span>): <span class="type">void</span>;
+  <span class="fn">isRagdolling</span>(entityId: <span class="type">string</span>): <span class="type">boolean</span>;
+  <span class="fn">update</span>(dt: <span class="type">number</span>): <span class="type">void</span>;           <span class="comment">// auto-recover after timer</span>
+  <span class="fn">dispose</span>(): <span class="type">void</span>;
+}</div>
+</div>
+
+<!-- SYSTEM 3: GRAB -->
+<div class="system-card">
+  <h3><span class="system-num">3</span> 3D Grab / Attach System <code>GrabSystem.ts</code> <span class="badge-p1">replaces P1's tether</span></h3>
+  <p class="desc">The signature mechanic. Nurse grabs a patient — physically. Patient's body trails behind, bumps into things, ragdolls if hit hard while being dragged. This is what people will clip.</p>
+
+  <h4>How It Works</h4>
+  <table>
+    <thead><tr><th>Phase</th><th>What happens</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Grab</strong></td><td>P1 calls <code>grabAttach(nurseId, patientId)</code>. Create a Havok distance constraint between nurse root and patient root. Set max distance = <code>Tuning.nurseTetherOffset</code>.</td></tr>
+      <tr><td><strong>Dragging</strong></td><td>Nurse moves (kinematic, P1 controls). Patient body is pulled by constraint. Patient can swing side to side, bump into walls/NPCs.</td></tr>
+      <tr><td><strong>Bump while dragging</strong></td><td>Patient hits another NPC → collision → potential ragdoll chain reaction on the hit NPC. Comedy.</td></tr>
+      <tr><td><strong>Release</strong></td><td>P1 calls <code>grabRelease(nurseId)</code>. Remove constraint. Patient stays where dropped.</td></tr>
+    </tbody>
+  </table>
+
+  <div class="callout callout-warn" style="margin-top: 0.75rem;">
+    <div class="callout-title">Fallback: spring-follow (if Havok constraints are too finicky)</div>
+    <p>If Havok distance joints don't work well: use a <strong>spring-follow</strong> system instead. Each frame, compute a force pulling patient toward nurse. Apply it as velocity. This is simpler and still looks physical enough.</p>
+  </div>
+
+  <h4>API Contract</h4>
+  <div class="code-block"><span class="kw">export class</span> <span class="type">GrabSystem</span> {
+  <span class="fn">grabAttach</span>(nurseId: <span class="type">string</span>, patientId: <span class="type">string</span>): <span class="type">void</span>;
+  <span class="fn">grabRelease</span>(nurseId: <span class="type">string</span>): <span class="type">void</span>;
+  <span class="fn">isGrabbing</span>(nurseId: <span class="type">string</span>): <span class="type">boolean</span>;
+  <span class="fn">getGrabbedPatient</span>(nurseId: <span class="type">string</span>): <span class="type">string</span> | <span class="val">null</span>;
+  <span class="fn">update</span>(dt: <span class="type">number</span>): <span class="type">void</span>;
+  <span class="fn">dispose</span>(): <span class="type">void</span>;
+}</div>
+</div>
+
+<!-- SYSTEM 4: ANIMATION -->
+<div class="system-card">
+  <h3><span class="system-num">4</span> Animation State Machine <code>CharacterAnimator.ts</code> <span class="badge-p2">needs P2 anims</span></h3>
+  <p class="desc">Controls which animation plays based on agent state. Handles the tricky animated → ragdoll → animated transitions.</p>
+
+  <h4>States</h4>
+  <div class="flow-diagram">
+    <span class="step step-anim">IDLE</span>
+    <span class="arrow">↔</span>
+    <span class="step step-anim">WALK</span>
+    <span class="arrow">→</span>
+    <span class="step step-physics">STUNNED</span>
+    <span class="arrow">→</span>
+    <span class="step step-physics">RAGDOLL</span>
+    <span class="arrow">→</span>
+    <span class="step step-anim">RECOVERING</span>
+    <span class="arrow">→</span>
+    <span class="step step-anim">IDLE</span>
+  </div>
+  <div class="flow-diagram" style="margin-top: -0.5rem;">
+    <span class="step step-anim">IDLE</span>
+    <span class="arrow">→</span>
+    <span class="step step-physics">GRABBED</span>
+    <span class="arrow">(dragged by nurse)</span>
+  </div>
+
+  <h4>Transition Logic</h4>
+  <table>
+    <thead><tr><th>From</th><th>To</th><th>Trigger</th></tr></thead>
+    <tbody>
+      <tr><td>idle / walk</td><td>stunned</td><td>Collision force &gt; threshold but &lt; ragdoll threshold</td></tr>
+      <tr><td>any</td><td>ragdoll</td><td>Collision force &gt; ragdoll threshold (from CharacterPhysics)</td></tr>
+      <tr><td>ragdoll</td><td>recovering</td><td>Ragdoll timer expires</td></tr>
+      <tr><td>recovering</td><td>idle</td><td>Recovery animation finishes (or just a short timer)</td></tr>
+      <tr><td>any</td><td>grabbed</td><td>GrabSystem attaches this entity</td></tr>
+      <tr><td>grabbed</td><td>idle</td><td>GrabSystem releases this entity</td></tr>
+    </tbody>
+  </table>
+
+  <div class="callout callout-info" style="margin-bottom: 0;">
+    <div class="callout-title">If P2's models have no animations</div>
+    <p>Fake it with transforms: <strong>idle</strong> = slight bob (y += sin(time) * 0.05), <strong>walk</strong> = faster bob + lean forward, <strong>stunned</strong> = tilt sideways + flash color, <strong>ragdoll</strong> = physics takes over. This still feels good.</p>
+  </div>
+</div>
+
+<hr class="divider">
+
+<!-- HOUR BY HOUR -->
+<div class="section-label">Hour-by-Hour Detail</div>
+
+<table class="hour-table">
+  <thead><tr><th>Hour</th><th>Task</th><th>Deliverable</th></tr></thead>
+  <tbody>
+    <tr>
+      <td>0–1</td>
+      <td><strong>CharacterPhysics.ts</strong> — Circle colliders, overlap resolution, mass-based push, <code>onCollision</code> callback. Test with 5–10 box NPCs bumping into each other.</td>
+      <td>P1 can call <code>physics.update(dt)</code> and subscribe to collisions</td>
+    </tr>
+    <tr>
+      <td>1–2</td>
+      <td><strong>RagdollSystem.ts</strong> — Box-limb ragdoll prototype. 7 Havok bodies per character. Trigger on hard collision. Auto-recover after timer. <strong>Talk to P2:</strong> what bones/skeleton do their character models have?</td>
+      <td>A character goes ragdoll when hit hard, recovers after N seconds</td>
+    </tr>
+    <tr>
+      <td>2–3</td>
+      <td><strong>GrabSystem.ts</strong> — Nurse-patient constraint. Distance joint or spring-follow. Patient trails behind nurse. Dragging a ragdolled patient works too.</td>
+      <td>P1 can call <code>grab.grabAttach(nurse, patient)</code> and patient physically follows</td>
+    </tr>
+    <tr>
+      <td>3–4</td>
+      <td><strong>CharacterAnimator.ts</strong> — State machine (idle/walk/stunned/ragdoll/grabbed). Hook into P2's models if skeletons are ready. Otherwise use box-bob animations.</td>
+      <td>Characters visually respond to state changes</td>
+    </tr>
+    <tr>
+      <td>4–5</td>
+      <td><strong>InjurySystem.ts + chaos tuning.</strong> Collision force → injury event → <code>HospitalEvent</code>. Tune knockback threshold, ragdoll recovery, grab tether stiffness. Make it feel funny.</td>
+      <td>Collisions cause injuries that P1's pipeline reacts to</td>
+    </tr>
+    <tr>
+      <td>5–6</td>
+      <td><strong>Integration.</strong> Replace P1's kinematic tether with your <code>GrabSystem</code>. Wire ragdoll into P1's NPC agents. Bug fixes, physics tuning.</td>
+      <td>Full physics + ragdoll working in the live game</td>
+    </tr>
+  </tbody>
+</table>
+
+<hr class="divider">
+
+<!-- TUNING VALUES -->
+<div class="section-label">Tuning Values You'll Use</div>
+
+<p class="desc">These are already defined in <code>src/config/tuning.ts</code>. Adjust during chaos tuning (hour 4–5).</p>
+
+<div class="card">
+  <table>
+    <thead><tr><th>Value</th><th>Current</th><th>Purpose</th></tr></thead>
+    <tbody>
+      <tr><td><code>knockbackThreshold</code></td><td>4.0</td><td>velocity &times; mass above this = ragdoll trigger</td></tr>
+      <tr><td><code>stunDurationSec</code></td><td>1.5</td><td>How long a stunned character can't move</td></tr>
+      <tr><td><code>defaultMass</code></td><td>1.0</td><td>Normal character mass</td></tr>
+      <tr><td><code>heavyMass</code></td><td>2.5</td><td>"Fat character" mass — pushes everyone</td></tr>
+      <tr><td><code>npcColliderRadius</code></td><td>0.4</td><td>Circle collider radius per NPC</td></tr>
+      <tr><td><code>nurseGrabRadius</code></td><td>1.2</td><td>Distance to auto-attach patient</td></tr>
+      <tr><td><code>nurseTetherOffset</code></td><td>1.0</td><td>How far behind patient trails when grabbed</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<hr class="divider">
+
+<!-- EXISTING CODE TO READ -->
+<div class="section-label">Existing Code You Should Read First</div>
+
+<div class="card">
+  <table>
+    <thead><tr><th>File</th><th>Why</th></tr></thead>
+    <tbody>
+      <tr><td><code>src/hospital/types.ts</code></td><td><code>PhysicsEntity</code> interface + <code>CollisionCallback</code> type — this is your API contract</td></tr>
+      <tr><td><code>src/player/PlayerController.ts</code></td><td>See how the repo does circle-circle collision already (obstacles array). Use the same pattern.</td></tr>
+      <tr><td><code>src/physics/enableHavokPhysics.ts</code></td><td>How Havok is initialized. You'll need this for ragdoll bodies.</td></tr>
+      <tr><td><code>src/config/tuning.ts</code></td><td>All the physics tuning values — use these, don't hardcode.</td></tr>
+      <tr><td><code>documentation/physics.md</code></td><td>Babylon.js physics overview, Havok gotchas, performance tips.</td></tr>
+      <tr><td><code>src/states/PlayState.ts</code> lines 958–1027</td><td>P1's current nurse-grab tether code. Your GrabSystem replaces this.</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<hr class="divider">
+
+<!-- GIT WORKFLOW -->
+<div class="section-label">Git Workflow (for you)</div>
+
+<div class="callout callout-success">
+  <div class="callout-title">Simple workflow</div>
+  <ol>
+    <li>Work on branch <code>p3/physics</code></li>
+    <li>At sync points: <code>git add . && git commit && git push</code></li>
+    <li>Tell P1: "ready for merge"</li>
+    <li>After P1 integrates: <code>git pull origin main</code> to get latest</li>
+    <li>Always <strong>commit or stash before pulling</strong></li>
+  </ol>
+</div>
+
+<div class="callout callout-critical">
+  <div class="callout-title">Files you own (nobody else touches these)</div>
+  <ul>
+    <li><code>src/physics/CharacterPhysics.ts</code></li>
+    <li><code>src/physics/RagdollSystem.ts</code></li>
+    <li><code>src/physics/GrabSystem.ts</code></li>
+    <li><code>src/hospital/InjurySystem.ts</code></li>
+    <li><code>src/player/CharacterAnimator.ts</code></li>
+  </ul>
+  <p style="margin-top: 0.5rem;"><strong>Never touch:</strong> <code>PlayState.ts</code>, <code>GameModel.ts</code>, <code>types.ts</code>, <code>hud.ts</code> — those are P1's.</p>
+</div>
+
+<hr class="divider">
+
+<p style="color: var(--text-muted); font-size: 0.8rem; text-align: center;">Hectic Hospital — Physics &amp; Ragdoll Plan &middot; P3 &middot; 2026</p>
+
+</body>
+</html>
