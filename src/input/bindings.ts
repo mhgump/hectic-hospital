@@ -8,6 +8,7 @@ export type KeyBinding = {
 // Touch/pointer are primary. Keyboard is fallback for desktop.
 export const defaultKeyBindings: KeyBinding[] = [
   { action: Action.Pause, codes: ["Escape"] },
+  { action: Action.Release, codes: ["KeyR"] },
   { action: Action.DebugToggle, codes: ["KeyZ"] },
   { action: Action.InspectorToggle, codes: ["KeyX"] },
 ];

@@ -25,6 +25,9 @@ import type { NameTag } from "../ui/nameTag";
 import { mountDialogueOverlay } from "../ui/dialogueOverlay";
 import type { DialogueOverlayMount, DialogueAction } from "../ui/dialogueOverlay";
 import { templateGenerator } from "../game/dialogueGenerator";
+import { NPC_PRESETS } from "../hospital/npcPresets";
+import type { NpcPreset } from "../hospital/npcPresets";
+import { requestPortrait, getCachedPortrait } from "../game/scenarioPortraits";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Stub interfaces for P2 and P3 systems (replace with real imports once ready)
@@ -274,6 +277,11 @@ export class PlayState implements GameState {
     // ─── Spawn initial staff (stub NPCs) ─────────────────────────────────
     this.spawnStubStaff(ctx, scene, shadowGenerator);
 
+    // ─── Pre-warm AI portraits for all NPC presets ───────────────────────
+    for (const preset of NPC_PRESETS) {
+      requestPortrait(preset.presetId, preset.appearance.promptDescription);
+    }
+
     // ─── Main game loop ──────────────────────────────────────────────────
     scene.onBeforeRenderObservable.add(() => {
       const dt = scene.getEngine().getDeltaTime() / 1000;
@@ -405,7 +413,7 @@ export class PlayState implements GameState {
       this.updateNurseGrab(ctx, dt);
 
       // ─ Escape to release nurse ─
-      if (this.nurseGrab && ctx.input.wasPressed(Action.Pause)) {
+      if (this.nurseGrab && ctx.input.wasPressed(Action.Release)) {
         this.releaseNurse(ctx);
         this.hud?.showAlert("Released nurse.");
       }
@@ -414,7 +422,7 @@ export class PlayState implements GameState {
       const newPatient = ctx.model.tickSpawner(dt);
       if (newPatient) {
         this.spawnPatientNpc(newPatient, scene, shadowGenerator);
-        this.hud?.showAlert(`New patient: ${newPatient.id}`);
+        this.hud?.showAlert(`New patient: ${newPatient.displayName ?? newPatient.id}`);
       }
 
       // ─ Update NPC agents ─
@@ -612,7 +620,8 @@ export class PlayState implements GameState {
     this.npcAgents.push(agent);
 
     const role = patient.dangerous ? "dangerous" : "patient";
-    const label = patient.dangerous ? "DANGEROUS" : "PATIENT";
+    const shortName = patient.displayName?.split(" ")[0] ?? "PATIENT";
+    const label = patient.dangerous ? `${shortName} ⚠` : shortName;
     const tag = createNameTag(scene, root, label, role);
     this.nameTags.set(patient.id, tag);
   }
@@ -1116,7 +1125,12 @@ export class PlayState implements GameState {
     this.paused = true;
     this.dialoguePatientId = patient.id;
 
-    const npcName = patient.id.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+    const preset = patient.presetId
+      ? NPC_PRESETS.find((p) => p.presetId === patient.presetId) ?? null
+      : null;
+
+    const npcName = patient.displayName
+      ?? patient.id.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
     const npcRole = patient.dangerous ? "dangerous" : "patient";
     const greeting = templateGenerator.generateGreeting(patient);
 
@@ -1131,6 +1145,8 @@ export class PlayState implements GameState {
     this.dialogueOverlay = mountDialogueOverlay({
       npcName,
       npcRole,
+      portraitColor: preset?.appearance.portraitColor,
+      portraitInitial: preset?.appearance.initial,
       initialText: greeting,
       actions,
       onPlayerMessage: (text) => {
@@ -1150,6 +1166,20 @@ export class PlayState implements GameState {
         this.closeDialogue();
       },
     });
+
+    // Trigger portrait generation via Scenario API
+    if (preset) {
+      const cached = getCachedPortrait(preset.presetId);
+      if (cached) {
+        this.dialogueOverlay.setPortraitUrl(cached);
+      } else {
+        requestPortrait(preset.presetId, preset.appearance.promptDescription).then((url) => {
+          if (url && this.dialogueOverlay) {
+            this.dialogueOverlay.setPortraitUrl(url);
+          }
+        });
+      }
+    }
   }
 
   private closeDialogue() {
@@ -1160,6 +1190,7 @@ export class PlayState implements GameState {
   }
 
   private resolveDialogueAction(actionKey: string, patient: Patient, ctx: StateContext) {
+    const name = patient.displayName ?? patient.id;
     switch (actionKey) {
       case "accept": {
         patient.state = "waiting";
@@ -1170,24 +1201,24 @@ export class PlayState implements GameState {
           agent.moveTarget.x += (Math.random() - 0.5) * 3;
           agent.moveTarget.z += (Math.random() - 0.5) * 3;
         }
-        this.hud?.showAlert(`Accepted ${patient.id}`);
+        this.hud?.showAlert(`Accepted ${name}`);
         break;
       }
       case "reject": {
         patient.state = "exiting";
         ctx.model.reputation = Math.max(0, ctx.model.reputation - 3);
-        this.hud?.showAlert(`Rejected ${patient.id} — Rep -3`);
+        this.hud?.showAlert(`Rejected ${name} — Rep -3`);
         break;
       }
       case "call_police": {
         if (patient.dangerous) {
           ctx.model.addMoney(50);
           ctx.model.reputation = Math.min(100, ctx.model.reputation + 5);
-          this.hud?.showAlert(`Police arrested ${patient.id}! +$50, Rep +5`);
+          this.hud?.showAlert(`Police arrested ${name}! +$50, Rep +5`);
         } else {
           ctx.model.addMoney(-100);
           ctx.model.reputation = Math.max(0, ctx.model.reputation - 10);
-          this.hud?.showAlert(`Wrongful arrest of ${patient.id}! -$100, Rep -10`);
+          this.hud?.showAlert(`Wrongful arrest of ${name}! -$100, Rep -10`);
         }
         patient.state = "gone";
         break;
