@@ -18,6 +18,7 @@ import type { HudMount } from "../ui/hud";
 import { PlayerController } from "../player/PlayerController";
 import { clearUiRoot } from "../ui/uiRoot";
 import { Runtime } from "../config/runtimeConfig";
+import { Action } from "../input/actions";
 import type { Patient, Staff, Room, RoomId } from "../hospital/types";
 import { createNameTag, disposeNameTagUI } from "../ui/nameTag";
 import type { NameTag } from "../ui/nameTag";
@@ -92,6 +93,17 @@ interface NpcAgent {
 // PlayState
 // ─────────────────────────────────────────────────────────────────────────────
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Nurse grab state: player directly controls a nurse who can auto-attach patients
+// ─────────────────────────────────────────────────────────────────────────────
+
+interface NurseGrabState {
+  nurseAgent: NpcAgent;
+  nurseData: Staff;
+  attachedPatientAgent: NpcAgent | null;
+  attachedPatientData: Patient | null;
+}
+
 export class PlayState implements GameState {
   readonly key = "play";
   private scene: Scene | null = null;
@@ -102,6 +114,9 @@ export class PlayState implements GameState {
   private npcAgents: NpcAgent[] = [];
   private obstacles: { center: Vector3; radius: number }[] = [];
   private nameTags = new Map<string, NameTag>();
+
+  /** When non-null, the player is directly controlling a nurse. */
+  private nurseGrab: NurseGrabState | null = null;
 
   constructor(private readonly engine: Engine) {}
 
@@ -168,8 +183,6 @@ export class PlayState implements GameState {
 
     // ─── Stub room markers (P2 will replace with real geometry) ──────────
     const rooms = createStubRooms();
-    ctx.model.rooms = rooms;
-    this._modelRooms = rooms;
 
     const markerMat = new StandardMaterial("roomMarker", scene);
     markerMat.diffuseColor = new Color3(0.3, 0.6, 0.9);
@@ -226,6 +239,11 @@ export class PlayState implements GameState {
 
     // ─── HUD ─────────────────────────────────────────────────────────────
     ctx.model.resetRun();
+
+    // Rooms must be set AFTER resetRun() since resetRun() clears the rooms array
+    ctx.model.rooms = rooms;
+    this._modelRooms = rooms;
+
     this.hud = mountHud();
     this.hud.setMoney(ctx.model.money);
     this.hud.setReputation(ctx.model.reputation);
@@ -247,18 +265,27 @@ export class PlayState implements GameState {
 
       // ─ Keyboard movement (camera-relative) ─
       const axis = ctx.input.getMoveAxis();
-      if (this.player) {
-        if (axis.x !== 0 || axis.y !== 0) {
-          const forward = camera.getTarget().subtract(camera.position).normalize();
-          forward.y = 0;
-          if (forward.lengthSquared() > 1e-6) forward.normalize();
-          const right = Vector3.Cross(Vector3.Up(), forward);
-          if (right.lengthSquared() > 1e-6) right.normalize();
-          const dir = right.scale(axis.x).add(forward.scale(axis.y));
+      const controlTarget = this.nurseGrab?.nurseAgent ?? null;
+      if (axis.x !== 0 || axis.y !== 0) {
+        const forward = camera.getTarget().subtract(camera.position).normalize();
+        forward.y = 0;
+        if (forward.lengthSquared() > 1e-6) forward.normalize();
+        const right = Vector3.Cross(Vector3.Up(), forward);
+        if (right.lengthSquared() > 1e-6) right.normalize();
+        const dir = right.scale(axis.x).add(forward.scale(axis.y));
+        if (controlTarget) {
+          // Keyboard moves the controlled nurse
+          controlTarget.moveTarget = null;
+          const step = Tuning.nurseControlSpeed * dt;
+          controlTarget.root.position.addInPlace(dir.scale(step));
+          const yaw = Math.atan2(dir.x, dir.z);
+          controlTarget.root.rotationQuaternion = null;
+          controlTarget.root.rotation = new Vector3(0, yaw, 0);
+        } else if (this.player) {
           this.player.setMoveDirection(dir);
-        } else {
-          this.player.setMoveDirection(null);
         }
+      } else if (!controlTarget && this.player) {
+        this.player.setMoveDirection(null);
       }
 
       // ─ Drag-to-look ─
@@ -268,7 +295,7 @@ export class PlayState implements GameState {
         camera.beta -= look.dy * Tuning.cameraDragSensitivity;
       }
 
-      // ─ Tap-to-move ─
+      // ─ Tap interaction ─
       const taps = ctx.input.consumeTaps();
       if (taps.length > 0) {
         const tap = taps.at(-1);
@@ -276,11 +303,40 @@ export class PlayState implements GameState {
           const pointerPos = this.getPointerScenePosition(tap.clientX, tap.clientY);
           if (pointerPos) {
             const pick = scene.pick(pointerPos.x, pointerPos.y, (m) => m === floor);
-            if (pick?.hit && pick.pickedPoint) {
-              this.player?.setMoveTarget(pick.pickedPoint);
-              moveMarker.position.x = pick.pickedPoint.x;
-              moveMarker.position.z = pick.pickedPoint.z;
-              moveMarker.isVisible = true;
+            const groundPoint = (pick?.hit && pick.pickedPoint) ? pick.pickedPoint : null;
+
+            if (this.nurseGrab) {
+              // Currently controlling a nurse
+              if (groundPoint) {
+                // Check if tapping on another nurse to switch, or on ground to move
+                const tappedNurse = this.findNurseNearPoint(groundPoint, ctx);
+                if (tappedNurse && tappedNurse.nurseAgent !== this.nurseGrab.nurseAgent) {
+                  // Release current, grab new nurse
+                  this.releaseNurse(ctx);
+                  this.grabNurse(tappedNurse.nurseAgent, tappedNurse.nurseData, ctx);
+                } else {
+                  // Move nurse to tapped point
+                  this.nurseGrab.nurseAgent.moveTarget = groundPoint.clone();
+                  moveMarker.position.x = groundPoint.x;
+                  moveMarker.position.z = groundPoint.z;
+                  moveMarker.isVisible = true;
+                }
+              }
+            } else {
+              // Not controlling anyone — check if tapping a nurse
+              if (groundPoint) {
+                const tappedNurse = this.findNurseNearPoint(groundPoint, ctx);
+                if (tappedNurse) {
+                  this.grabNurse(tappedNurse.nurseAgent, tappedNurse.nurseData, ctx);
+                  this.hud?.showAlert(`Controlling ${tappedNurse.nurseData.id}! Tap ground to move.`);
+                } else {
+                  // Normal tap-to-move for player
+                  this.player?.setMoveTarget(groundPoint);
+                  moveMarker.position.x = groundPoint.x;
+                  moveMarker.position.z = groundPoint.z;
+                  moveMarker.isVisible = true;
+                }
+              }
             }
           }
         }
@@ -288,9 +344,22 @@ export class PlayState implements GameState {
 
       this.player?.update(scene);
 
-      // Hide move marker when player arrives
-      if (this.player && !this.player.isMoving()) {
+      // Hide move marker when current controlled entity arrives
+      if (this.nurseGrab) {
+        if (!this.nurseGrab.nurseAgent.moveTarget) {
+          moveMarker.isVisible = false;
+        }
+      } else if (this.player && !this.player.isMoving()) {
         moveMarker.isVisible = false;
+      }
+
+      // ─ Nurse grab: auto-attach nearby patients + tether ─
+      this.updateNurseGrab(ctx, dt);
+
+      // ─ Escape to release nurse ─
+      if (this.nurseGrab && ctx.input.wasPressed(Action.Pause)) {
+        this.releaseNurse(ctx);
+        this.hud?.showAlert("Released nurse.");
       }
 
       // ─ Patient spawning ─
@@ -337,6 +406,8 @@ export class PlayState implements GameState {
             tag.update("ANGRY", "#D93636");
           } else if (p.state === "in_treatment") {
             tag.update("TREATING", "#4A7FDB");
+          } else if (p.state === "escorted" && this.nurseGrab?.attachedPatientData?.id === p.id) {
+            tag.update("GRABBED", "#00FF88");
           } else if (p.state === "nurse_coming" || p.state === "escorted") {
             tag.update("ESCORTED", "#D4A017");
           } else if (p.state === "waiting") {
@@ -372,6 +443,7 @@ export class PlayState implements GameState {
   }
 
   exit() {
+    this.nurseGrab = null;
     this.cameraRig?.teardown();
     this.cameraRig = null;
     this.hud?.teardown();
@@ -494,9 +566,17 @@ export class PlayState implements GameState {
   // ─────────────────────────────────────────────────────────────────────────
 
   private updateAgents(ctx: StateContext, dt: number) {
+    const grabbedNurseId = this.nurseGrab?.nurseData.id ?? null;
+    const tetheredPatientId = this.nurseGrab?.attachedPatientData?.id ?? null;
+
     for (const agent of this.npcAgents) {
-      // Move toward target
-      if (agent.moveTarget) {
+      // Skip movement for player-controlled nurse (player moves it directly)
+      // Skip movement for tethered patient (tether handles position)
+      const isGrabbedNurse = grabbedNurseId && agent.data.id === grabbedNurseId;
+      const isTetheredPatient = tetheredPatientId && agent.data.id === tetheredPatientId;
+
+      // Grabbed nurse still moves toward tap targets; tethered patient is positioned by tether
+      if (!isTetheredPatient && agent.moveTarget) {
         const pos = agent.root.position;
         const to = agent.moveTarget.subtract(pos);
         to.y = 0;
@@ -506,7 +586,8 @@ export class PlayState implements GameState {
           agent.moveTarget = null;
         } else {
           const dir = to.scale(1 / Math.max(dist, 1e-6));
-          const step = Math.min(dist, agent.speed * dt);
+          const speed = isGrabbedNurse ? Tuning.nurseControlSpeed : agent.speed;
+          const step = Math.min(dist, speed * dt);
           pos.addInPlace(dir.scale(step));
 
           const yaw = Math.atan2(dir.x, dir.z);
@@ -515,13 +596,13 @@ export class PlayState implements GameState {
         }
       }
 
-      // Patient pipeline logic
-      if (this.isPatient(agent.data)) {
+      // Patient pipeline logic (skip for tethered patient — player decides where they go)
+      if (this.isPatient(agent.data) && !isTetheredPatient) {
         this.tickPatientPipeline(ctx, agent, dt);
       }
 
-      // Staff AI logic
-      if (this.isStaff(agent.data)) {
+      // Staff AI logic (skip for player-controlled nurse)
+      if (this.isStaff(agent.data) && !isGrabbedNurse) {
         this.tickStaffAi(ctx, agent, dt);
       }
     }
@@ -591,6 +672,12 @@ export class PlayState implements GameState {
           nurseAgent.root.position,
           agent.root.position,
         );
+
+        // Keep chasing the patient — they may still be walking to the waiting room
+        if (!nurseAgent.moveTarget && nurseDist >= 1.0) {
+          nurseAgent.moveTarget = agent.root.position.clone();
+        }
+
         if (nurseDist < 1.0) {
           // Nurse arrived — both walk to the room together
           patient.state = "escorted";
@@ -770,6 +857,178 @@ export class PlayState implements GameState {
   private isStaff(data: Patient | Staff): data is Staff {
     return "role" in data;
   }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // Nurse grab system
+  // ─────────────────────────────────────────────────────────────────────────
+
+  private findNurseNearPoint(
+    worldPoint: Vector3,
+    ctx: StateContext,
+  ): { nurseAgent: NpcAgent; nurseData: Staff } | null {
+    let bestDist: number = Tuning.npcPickRadius;
+    let best: { nurseAgent: NpcAgent; nurseData: Staff } | null = null;
+
+    for (const agent of this.npcAgents) {
+      if (!this.isStaff(agent.data)) continue;
+      if (agent.data.role !== "nurse") continue;
+      const dist = Vector3.Distance(
+        new Vector3(agent.root.position.x, 0, agent.root.position.z),
+        new Vector3(worldPoint.x, 0, worldPoint.z),
+      );
+      if (dist < bestDist) {
+        bestDist = dist;
+        best = { nurseAgent: agent, nurseData: agent.data as Staff };
+      }
+    }
+    return best;
+  }
+
+  private grabNurse(nurseAgent: NpcAgent, nurseData: Staff, _ctx: StateContext) {
+    // Pause nurse AI — player takes over movement
+    nurseAgent.moveTarget = null;
+    nurseData.state = "working";
+
+    this.nurseGrab = {
+      nurseAgent,
+      nurseData,
+      attachedPatientAgent: null,
+      attachedPatientData: null,
+    };
+
+    // Visual feedback: highlight the nurse
+    const tag = this.nameTags.get(nurseData.id);
+    if (tag) {
+      tag.update("NURSE (YOU)", "#00FF88");
+    }
+  }
+
+  private releaseNurse(ctx: StateContext) {
+    if (!this.nurseGrab) return;
+
+    const { nurseAgent, nurseData, attachedPatientAgent, attachedPatientData } = this.nurseGrab;
+
+    // If carrying a patient, check if we dropped them near a patient room
+    if (attachedPatientAgent && attachedPatientData) {
+      const droppedAt = attachedPatientAgent.root.position;
+      let droppedInRoom: Room | null = null;
+
+      for (const room of this._modelRooms) {
+        if (room.id === "reception" || room.id === "waiting") continue;
+        const dist = Vector3.Distance(droppedAt, room.position);
+        if (dist < 3.5) {
+          droppedInRoom = room;
+          break;
+        }
+      }
+
+      if (droppedInRoom && !droppedInRoom.occupied) {
+        // Dropped patient in a free room — fast-track to treatment
+        droppedInRoom.occupied = true;
+        droppedInRoom.occupantId = attachedPatientData.id;
+        attachedPatientData.assignedRoom = droppedInRoom.id;
+        attachedPatientData.state = "assigned";
+        attachedPatientAgent.moveTarget = null;
+        this.hud?.showAlert(`Dropped ${attachedPatientData.id} in ${droppedInRoom.id}!`);
+      } else if (droppedInRoom && droppedInRoom.occupied) {
+        // Room is occupied — patient just stays where dropped, goes back to waiting
+        attachedPatientData.state = "waiting";
+        attachedPatientAgent.moveTarget = null;
+        this.hud?.showAlert(`${droppedInRoom.id} is occupied! Patient waits here.`);
+      } else {
+        // Dropped in hallway — patient resumes waiting
+        attachedPatientData.state = "waiting";
+        attachedPatientAgent.moveTarget = null;
+      }
+    }
+
+    // Free the nurse back to idle AI
+    nurseData.state = "idle";
+    nurseData.assignedPatient = null;
+    nurseAgent.moveTarget = null;
+
+    const tag = this.nameTags.get(nurseData.id);
+    if (tag) {
+      tag.update("NURSE", "#FFFFFF");
+    }
+
+    this.nurseGrab = null;
+  }
+
+  private updateNurseGrab(_ctx: StateContext, _dt: number) {
+    if (!this.nurseGrab) return;
+
+    const { nurseAgent, attachedPatientAgent } = this.nurseGrab;
+
+    // Auto-attach: check for nearby patients that aren't already being treated
+    if (!this.nurseGrab.attachedPatientAgent) {
+      for (const agent of this.npcAgents) {
+        if (!this.isPatient(agent.data)) continue;
+        const patient = agent.data as Patient;
+        // Only grab patients who are waiting or in reception or nurse_coming
+        if (
+          patient.state !== "waiting" &&
+          patient.state !== "reception" &&
+          patient.state !== "nurse_coming" &&
+          patient.state !== "entering"
+        ) continue;
+
+        const dist = Vector3.Distance(
+          nurseAgent.root.position,
+          agent.root.position,
+        );
+        if (dist < Tuning.nurseGrabRadius) {
+          // Attach!
+          this.nurseGrab.attachedPatientAgent = agent;
+          this.nurseGrab.attachedPatientData = patient;
+          // Cancel any existing nurse assignment for this patient
+          const prevNurse = _ctx.model.staff.find(
+            (s) => s.assignedPatient === patient.id && s.role === "nurse" && s.id !== this.nurseGrab!.nurseData.id,
+          );
+          if (prevNurse) {
+            prevNurse.state = "idle";
+            prevNurse.assignedPatient = null;
+          }
+          patient.state = "escorted";
+          agent.moveTarget = null; // will be tethered instead
+          this.nurseGrab.nurseData.assignedPatient = patient.id;
+          this.hud?.showAlert(`Grabbed ${patient.id}! Move to a room.`);
+          break;
+        }
+      }
+    }
+
+    // Tether: patient follows nurse with an offset
+    if (attachedPatientAgent) {
+      const nursePos = nurseAgent.root.position;
+      // Patient follows behind the nurse (opposite of nurse facing direction)
+      const nurseYaw = nurseAgent.root.rotation?.y ?? 0;
+      const offsetX = -Math.sin(nurseYaw) * Tuning.nurseTetherOffset;
+      const offsetZ = -Math.cos(nurseYaw) * Tuning.nurseTetherOffset;
+      const targetPos = new Vector3(
+        nursePos.x + offsetX,
+        0,
+        nursePos.z + offsetZ,
+      );
+      // Smooth follow
+      const patPos = attachedPatientAgent.root.position;
+      patPos.x += (targetPos.x - patPos.x) * 0.15;
+      patPos.z += (targetPos.z - patPos.z) * 0.15;
+
+      // Face the nurse
+      const toNurse = nursePos.subtract(patPos);
+      toNurse.y = 0;
+      if (toNurse.lengthSquared() > 0.01) {
+        const yaw = Math.atan2(toNurse.x, toNurse.z);
+        attachedPatientAgent.root.rotationQuaternion = null;
+        attachedPatientAgent.root.rotation = new Vector3(0, yaw, 0);
+      }
+    }
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // Escape key to release nurse
+  // ─────────────────────────────────────────────────────────────────────────
 
   private getPointerScenePosition(clientX: number, clientY: number): { x: number; y: number } | null {
     const canvas = this.engine.getRenderingCanvas();

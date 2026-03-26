@@ -54,6 +54,14 @@ export const Tuning = {
   shiftDurationSec: 180,
 
   // ───────────────────────────────────────────────────────────────────────────
+  // Nurse grab / player control
+  // ───────────────────────────────────────────────────────────────────────────
+  nurseGrabRadius: 1.2,       // how close nurse must be to auto-attach a patient
+  nurseTetherOffset: 1.0,     // patient follows this far behind the nurse
+  nurseControlSpeed: 4.5,     // nurse move speed when player-controlled
+  npcPickRadius: 1.5,         // tap within this world-distance to select an NPC
+
+  // ───────────────────────────────────────────────────────────────────────────
   // Physics / Chaos (for P3)
   // ───────────────────────────────────────────────────────────────────────────
   knockbackThreshold: 4.0, // velocity * mass above this triggers a fall
