@@ -7,6 +7,8 @@ export enum AssetId {
   KenneyCrystalPickup = "KenneyCrystalPickup",
   KenneyAnimalDog = "KenneyAnimalDog",
 
+  NurseRigged = "NurseRigged",
+
   KenneySfxClick = "KenneySfxClick",
   KenneySfxPickup = "KenneySfxPickup",
 }

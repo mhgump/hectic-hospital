@@ -15,7 +15,13 @@
     "e2e:headed": "npx playwright test --headed",
     "e2e:report": "npx playwright show-report",
     "kenney:search": "node scripts/kenneySearch.mjs",
-    "kenney:catalog": "node scripts/kenneyCatalog.mjs"
+    "kenney:catalog": "node scripts/kenneyCatalog.mjs",
+    "generate3d": "node --env-file=.env scripts/generate3d.mjs",
+    "generateModel": "node --env-file=.env scripts/generateModel.mjs",
+    "generateTexture": "node --env-file=.env scripts/generateTexture.mjs",
+    "generateRagdoll": "node --env-file=.env scripts/generateRagdoll.mjs",
+    "generateSfx": "node --env-file=.env scripts/generateSfx.mjs",
+    "hospital-server": "node --env-file=.env debug_rooms/hospital-server.mjs"
   },
   "dependencies": {
     "@babylonjs/core": "^8.44.1",

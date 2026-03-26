@@ -46,6 +46,11 @@ export const assetRegistry: Record<AssetId, AssetEntry> = {
     path: "assets/models/kenney/animals/animal-dog.glb",
   },
 
+  [AssetId.NurseRigged]: {
+    kind: "model",
+    path: "assets/models/nurse_rigged.glb",
+  },
+
   [AssetId.KenneySfxClick]: {
     kind: "audio",
     mp3Path: "assets/sounds/kenney/interface/click_001.mp3",
