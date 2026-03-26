@@ -15,7 +15,6 @@ import { createOrthoArcRotateCameraRig } from "../engine/createOrthoCameraRig";
 import type { GameState, StateContext } from "../game/StateManager";
 import { mountHud } from "../ui/hud";
 import type { HudMount } from "../ui/hud";
-import { PlayerController } from "../player/PlayerController";
 import { clearUiRoot } from "../ui/uiRoot";
 import { Runtime } from "../config/runtimeConfig";
 import { Action } from "../input/actions";
@@ -62,11 +61,9 @@ export class PlayState implements GameState {
   readonly key = "play";
   private scene: Scene | null = null;
   private hud: HudMount | null = null;
-  private player: PlayerController | null = null;
   private cameraRig: OrthoCameraRig | null = null;
 
   private npcAgents: NpcAgent[] = [];
-  private obstacles: { center: Vector3; radius: number }[] = [];
   private nameTags = new Map<string, NameTag>();
 
   /** When non-null, the player is directly controlling a nurse. */
@@ -149,26 +146,6 @@ export class PlayState implements GameState {
     const roomsJson = await fetchRoomsJson();
     this.disposeHospital = buildHospitalGeometry(scene, roomsJson);
 
-    // ─── Player ──────────────────────────────────────────────────────────
-    const playerRoot = new TransformNode("playerRoot", scene);
-    playerRoot.position = new Vector3(0, 0, -5);
-
-    // Temp player visual (box) until P2 provides character meshes
-    const playerBox = MeshBuilder.CreateBox("playerVisual", { width: 0.8, height: 1.8, depth: 0.8 }, scene);
-    playerBox.parent = playerRoot;
-    playerBox.position.y = 0.9;
-    const playerMat = new StandardMaterial("playerMat", scene);
-    playerMat.diffuseColor = new Color3(0.2, 0.8, 0.3);
-    playerBox.material = playerMat;
-    shadowGenerator.addShadowCaster(playerBox);
-
-    this.player = new PlayerController({
-      root: playerRoot,
-      moveSpeed: Tuning.playerMoveSpeed,
-      arrivalThreshold: Tuning.playerArrivalThreshold,
-    });
-    this.player.setColliders({ obstacles: this.obstacles, playerRadius: Tuning.playerColliderRadius });
-
     // ─── Move marker ─────────────────────────────────────────────────────
     const moveMarker = MeshBuilder.CreateDisc(
       "moveMarker",
@@ -226,8 +203,6 @@ export class PlayState implements GameState {
         if (rt.lengthSquared() > 1e-6) rt.normalize();
         camera.target.addInPlace(rt.scale(px * panStep).add(fwd.scale(py * panStep)));
       }
-      if (this.player) this.player.setMoveDirection(null);
-
       // ─ Tap interaction ─
       const taps = ctx.input.consumeTaps();
       if (taps.length > 0) {
@@ -272,12 +247,6 @@ export class PlayState implements GameState {
                 if (tappedNurse) {
                   this.grabNurse(tappedNurse.nurseAgent, tappedNurse.nurseData, ctx);
                   this.hud?.showAlert(`Controlling ${tappedNurse.nurseData.id}! Tap ground to move.`);
-                } else {
-                  // Normal tap-to-move for player
-                  this.player?.setMoveTarget(groundPoint);
-                  moveMarker.position.x = groundPoint.x;
-                  moveMarker.position.z = groundPoint.z;
-                  moveMarker.isVisible = true;
                 }
               }
             }
@@ -285,14 +254,8 @@ export class PlayState implements GameState {
         }
       }
 
-      this.player?.update(scene);
-
-      // Hide move marker when current controlled entity arrives
-      if (this.nurseGrab) {
-        if (!this.nurseGrab.nurseAgent.moveTarget) {
-          moveMarker.isVisible = false;
-        }
-      } else if (this.player && !this.player.isMoving()) {
+      // Hide move marker when nurse arrives
+      if (!this.nurseGrab?.nurseAgent.moveTarget) {
         moveMarker.isVisible = false;
       }
 
@@ -393,9 +356,7 @@ export class PlayState implements GameState {
     this.cameraRig = null;
     this.hud?.teardown();
     this.hud = null;
-    this.player = null;
     this.npcAgents = [];
-    this.obstacles = [];
     for (const tag of this.nameTags.values()) tag.dispose();
     this.nameTags.clear();
     disposeNameTagUI();
