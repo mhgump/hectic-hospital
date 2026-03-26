@@ -26,9 +26,9 @@ import type { DialogueOverlayMount, DialogueAction } from "../ui/dialogueOverlay
 import { templateGenerator } from "../game/dialogueGenerator";
 import { NPC_PRESETS } from "../hospital/npcPresets";
 import { getHospitalRooms, fetchRoomsJson, buildHospitalGeometry } from "../world/HospitalLayout";
-
-// P3: CharacterPhysics — uncomment and import once P3 pushes their module
-// import { CharacterPhysics } from "../physics/CharacterPhysics";
+import { enableHavokPhysics } from "../physics/enableHavokPhysics";
+import { addWallPhysics, resolveWallPenetrations } from "../physics/wallColliders";
+import type { WallAABB } from "../physics/wallColliders";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Simple NPC controller (moves toward target, used until P3 has full physics)
@@ -69,6 +69,8 @@ export class PlayState implements GameState {
   /** When non-null, the player is directly controlling a nurse. */
   private nurseGrab: NurseGrabState | null = null;
   private disposeHospital: (() => void) | null = null;
+  private disposeWallPhysics: (() => void) | null = null;
+  private wallAABBs: WallAABB[] = [];
 
   /** Dialogue overlay state — simulation is frozen while open. */
   private paused = false;
@@ -141,10 +143,18 @@ export class PlayState implements GameState {
     floor.receiveShadows = true;
     floor.isPickable = true;
 
+    // ─── Physics ────────────────────────────────────────────────────────
+    await enableHavokPhysics(scene, { gravity: new Vector3(0, 0, 0) });
+
     // ─── Hospital room geometry ───────────────────────────────────────────
     const rooms = getHospitalRooms();
     const roomsJson = await fetchRoomsJson();
     this.disposeHospital = buildHospitalGeometry(scene, roomsJson);
+
+    // ─── Wall colliders (static Havok bodies + AABBs) ───────────────────
+    const wallResult = addWallPhysics(scene);
+    this.disposeWallPhysics = wallResult.dispose;
+    this.wallAABBs = wallResult.wallAABBs;
 
     // ─── Move marker ─────────────────────────────────────────────────────
     const moveMarker = MeshBuilder.CreateDisc(
@@ -278,6 +288,11 @@ export class PlayState implements GameState {
       // ─ Update NPC agents ─
       this.updateAgents(ctx, dt);
 
+      // ─ Resolve wall collisions (post-movement pushback) ─
+      if (this.wallAABBs.length > 0) {
+        resolveWallPenetrations(this.npcAgents, this.wallAABBs, Tuning.npcColliderRadius);
+      }
+
       // ─ Patience decay for waiting patients ─
       for (const p of ctx.model.patients) {
         if (p.state === "waiting" || p.state === "reception") {
@@ -360,6 +375,9 @@ export class PlayState implements GameState {
     for (const tag of this.nameTags.values()) tag.dispose();
     this.nameTags.clear();
     disposeNameTagUI();
+    this.disposeWallPhysics?.();
+    this.disposeWallPhysics = null;
+    this.wallAABBs = [];
     this.disposeHospital?.();
     this.disposeHospital = null;
     this.scene = null;
