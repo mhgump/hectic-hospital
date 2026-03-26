@@ -22,6 +22,9 @@ import { Action } from "../input/actions";
 import type { Patient, Staff, Room, RoomId } from "../hospital/types";
 import { createNameTag, disposeNameTagUI } from "../ui/nameTag";
 import type { NameTag } from "../ui/nameTag";
+import { mountDialogueOverlay } from "../ui/dialogueOverlay";
+import type { DialogueOverlayMount, DialogueAction } from "../ui/dialogueOverlay";
+import { templateGenerator } from "../game/dialogueGenerator";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Stub interfaces for P2 and P3 systems (replace with real imports once ready)
@@ -118,6 +121,11 @@ export class PlayState implements GameState {
   /** When non-null, the player is directly controlling a nurse. */
   private nurseGrab: NurseGrabState | null = null;
 
+  /** Dialogue overlay state — simulation is frozen while open. */
+  private paused = false;
+  private dialogueOverlay: DialogueOverlayMount | null = null;
+  private dialoguePatientId: string | null = null;
+
   constructor(private readonly engine: Engine) {}
 
   async enter(ctx: StateContext) {
@@ -208,9 +216,9 @@ export class PlayState implements GameState {
     playerRoot.position = new Vector3(0, 0, -5);
 
     // Temp player visual (box) until P2 provides character meshes
-    const playerBox = MeshBuilder.CreateBox("playerVisual", { size: 0.8 }, scene);
+    const playerBox = MeshBuilder.CreateBox("playerVisual", { width: 0.8, height: 1.8, depth: 0.8 }, scene);
     playerBox.parent = playerRoot;
-    playerBox.position.y = 0.4;
+    playerBox.position.y = 0.9;
     const playerMat = new StandardMaterial("playerMat", scene);
     playerMat.diffuseColor = new Color3(0.2, 0.8, 0.3);
     playerBox.material = playerMat;
@@ -255,6 +263,9 @@ export class PlayState implements GameState {
     // ─── Main game loop ──────────────────────────────────────────────────
     scene.onBeforeRenderObservable.add(() => {
       const dt = scene.getEngine().getDeltaTime() / 1000;
+
+      // ─ Dialogue pause ─
+      if (this.paused) return;
 
       // ─ Shift timer ─
       ctx.model.shiftTimeLeft -= dt;
@@ -305,7 +316,17 @@ export class PlayState implements GameState {
             const pick = scene.pick(pointerPos.x, pointerPos.y, (m) => m === floor);
             const groundPoint = (pick?.hit && pick.pickedPoint) ? pick.pickedPoint : null;
 
-            if (this.nurseGrab) {
+            // ─ Check for dialogue-triggering NPC tap ─
+            let dialogueTapped = false;
+            if (groundPoint && !this.nurseGrab) {
+              const tappedDialogueNpc = this.findDialogueNpcNearPoint(groundPoint, ctx);
+              if (tappedDialogueNpc) {
+                this.openDialogue(tappedDialogueNpc, ctx);
+                dialogueTapped = true;
+              }
+            }
+
+            if (!dialogueTapped && this.nurseGrab) {
               // Currently controlling a nurse
               if (groundPoint) {
                 // Check if tapping on another nurse to switch, or on ground to move
@@ -322,7 +343,7 @@ export class PlayState implements GameState {
                   moveMarker.isVisible = true;
                 }
               }
-            } else {
+            } else if (!dialogueTapped) {
               // Not controlling anyone — check if tapping a nurse
               if (groundPoint) {
                 const tappedNurse = this.findNurseNearPoint(groundPoint, ctx);
@@ -443,6 +464,10 @@ export class PlayState implements GameState {
   }
 
   exit() {
+    this.dialogueOverlay?.teardown();
+    this.dialogueOverlay = null;
+    this.dialoguePatientId = null;
+    this.paused = false;
     this.nurseGrab = null;
     this.cameraRig?.teardown();
     this.cameraRig = null;
@@ -484,9 +509,9 @@ export class PlayState implements GameState {
       const root = new TransformNode(id, scene);
       root.position.copyFrom(def.pos);
 
-      const box = MeshBuilder.CreateBox(`${id}_vis`, { size: 0.7 }, scene);
+      const box = MeshBuilder.CreateBox(`${id}_vis`, { width: 0.7, height: 1.7, depth: 0.7 }, scene);
       box.parent = root;
-      box.position.y = 0.35;
+      box.position.y = 0.85;
       const mat = new StandardMaterial(`${id}_mat`, scene);
       mat.diffuseColor = def.color;
       box.material = mat;
@@ -528,9 +553,9 @@ export class PlayState implements GameState {
     );
     patient.mesh = root;
 
-    const box = MeshBuilder.CreateBox(`${patient.id}_vis`, { size: 0.6 }, scene);
+    const box = MeshBuilder.CreateBox(`${patient.id}_vis`, { width: 0.6, height: 1.5, depth: 0.6 }, scene);
     box.parent = root;
-    box.position.y = 0.3;
+    box.position.y = 0.75;
     const mat = new StandardMaterial(`${patient.id}_mat`, scene);
     mat.diffuseColor = patient.dangerous
       ? new Color3(0.9, 0.2, 0.2)
@@ -1027,7 +1052,122 @@ export class PlayState implements GameState {
   }
 
   // ─────────────────────────────────────────────────────────────────────────
-  // Escape key to release nurse
+  // Dialogue overlay (visual novel mode)
+  // ─────────────────────────────────────────────────────────────────────────
+
+  private findDialogueNpcNearPoint(
+    worldPoint: Vector3,
+    _ctx: StateContext,
+  ): Patient | null {
+    let bestDist: number = Tuning.npcPickRadius;
+    let best: Patient | null = null;
+
+    for (const agent of this.npcAgents) {
+      if (!this.isPatient(agent.data)) continue;
+      const patient = agent.data as Patient;
+      if (patient.state !== "reception" && patient.state !== "waiting") continue;
+
+      const dist = Vector3.Distance(
+        new Vector3(agent.root.position.x, 0, agent.root.position.z),
+        new Vector3(worldPoint.x, 0, worldPoint.z),
+      );
+      if (dist < bestDist) {
+        bestDist = dist;
+        best = patient;
+      }
+    }
+    return best;
+  }
+
+  private openDialogue(patient: Patient, ctx: StateContext) {
+    if (this.dialogueOverlay) return;
+
+    this.paused = true;
+    this.dialoguePatientId = patient.id;
+
+    const npcName = patient.id.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+    const npcRole = patient.dangerous ? "dangerous" : "patient";
+    const greeting = templateGenerator.generateGreeting(patient);
+
+    const actions: DialogueAction[] = [
+      { label: "Accept", key: "accept", color: "rgba(40, 167, 69, 0.85)" },
+      { label: "Reject", key: "reject", color: "rgba(180, 80, 20, 0.85)" },
+    ];
+    if (patient.dangerous || Math.random() < 0.3) {
+      actions.push({ label: "Call Police", key: "call_police", color: "rgba(200, 40, 40, 0.85)" });
+    }
+
+    this.dialogueOverlay = mountDialogueOverlay({
+      npcName,
+      npcRole,
+      initialText: greeting,
+      actions,
+      onPlayerMessage: (text) => {
+        const reply = templateGenerator.generateReply(patient, text);
+        if (this.dialogueOverlay) {
+          this.dialogueOverlay.setThinking(true);
+          setTimeout(() => {
+            this.dialogueOverlay?.setThinking(false);
+            this.dialogueOverlay?.appendNpcText(reply);
+          }, 400 + Math.random() * 600);
+        }
+      },
+      onAction: (actionKey) => {
+        this.resolveDialogueAction(actionKey, patient, ctx);
+      },
+      onClose: () => {
+        this.closeDialogue();
+      },
+    });
+  }
+
+  private closeDialogue() {
+    this.dialogueOverlay?.teardown();
+    this.dialogueOverlay = null;
+    this.dialoguePatientId = null;
+    this.paused = false;
+  }
+
+  private resolveDialogueAction(actionKey: string, patient: Patient, ctx: StateContext) {
+    switch (actionKey) {
+      case "accept": {
+        patient.state = "waiting";
+        const waitRoom = this.findRoom("waiting");
+        const agent = this.npcAgents.find((a) => a.data.id === patient.id);
+        if (waitRoom && agent) {
+          agent.moveTarget = waitRoom.entryPoint.clone();
+          agent.moveTarget.x += (Math.random() - 0.5) * 3;
+          agent.moveTarget.z += (Math.random() - 0.5) * 3;
+        }
+        this.hud?.showAlert(`Accepted ${patient.id}`);
+        break;
+      }
+      case "reject": {
+        patient.state = "exiting";
+        ctx.model.reputation = Math.max(0, ctx.model.reputation - 3);
+        this.hud?.showAlert(`Rejected ${patient.id} — Rep -3`);
+        break;
+      }
+      case "call_police": {
+        if (patient.dangerous) {
+          ctx.model.addMoney(50);
+          ctx.model.reputation = Math.min(100, ctx.model.reputation + 5);
+          this.hud?.showAlert(`Police arrested ${patient.id}! +$50, Rep +5`);
+        } else {
+          ctx.model.addMoney(-100);
+          ctx.model.reputation = Math.max(0, ctx.model.reputation - 10);
+          this.hud?.showAlert(`Wrongful arrest of ${patient.id}! -$100, Rep -10`);
+        }
+        patient.state = "gone";
+        break;
+      }
+    }
+
+    this.closeDialogue();
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // Pointer helpers
   // ─────────────────────────────────────────────────────────────────────────
 
   private getPointerScenePosition(clientX: number, clientY: number): { x: number; y: number } | null {

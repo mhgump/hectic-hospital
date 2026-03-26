@@ -260,3 +260,281 @@ body {
   font-size: 14px;
   opacity: 0.75;
 }
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   Dialogue Overlay (Visual Novel Mode)
+   ───────────────────────────────────────────────────────────────────────────── */
+
+.hh_dlg_overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: hh_dlg_fadeIn 0.25s ease-out;
+}
+
+@keyframes hh_dlg_fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.hh_dlg_backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.72);
+  backdrop-filter: blur(6px);
+}
+
+.hh_dlg_panel {
+  position: relative;
+  width: min(420px, calc(100% - 20px));
+  max-height: calc(100% - 20px);
+  display: flex;
+  flex-direction: column;
+  border-radius: 18px;
+  background: linear-gradient(180deg, #1c2740 0%, #111827 100%);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255,255,255,0.06);
+  overflow: hidden;
+  color: #e0e4ec;
+  font-size: 14px;
+}
+
+/* ─ Top bar ─ */
+.hh_dlg_topbar {
+  padding: 10px 14px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.hh_dlg_close {
+  appearance: none;
+  border: 0;
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 13px;
+  font-weight: 600;
+  padding: 6px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.hh_dlg_close:hover {
+  background: rgba(255, 255, 255, 0.14);
+  color: #fff;
+}
+
+.hh_dlg_close_arrow {
+  margin-right: 4px;
+}
+
+/* ─ Portrait area ─ */
+.hh_dlg_portrait_area {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 18px 16px 12px;
+  background: linear-gradient(180deg, rgba(60, 100, 180, 0.12), transparent);
+}
+
+.hh_dlg_portrait {
+  width: 90px;
+  height: 90px;
+  border-radius: 50%;
+  border: 3px solid rgba(255, 255, 255, 0.15);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.35);
+}
+
+.hh_dlg_portrait_initial {
+  font-size: 36px;
+  font-weight: 800;
+  color: rgba(0, 0, 0, 0.5);
+  text-shadow: 0 1px 2px rgba(255, 255, 255, 0.2);
+  user-select: none;
+}
+
+.hh_dlg_npc_name {
+  margin-top: 8px;
+  font-size: 16px;
+  font-weight: 800;
+  color: #fff;
+}
+
+.hh_dlg_npc_role {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  opacity: 0.5;
+  font-weight: 600;
+}
+
+/* ─ Dialogue history ─ */
+.hh_dlg_history {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px 14px;
+  min-height: 100px;
+  max-height: 200px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.hh_dlg_bubble {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-width: 88%;
+  animation: hh_dlg_bubbleIn 0.2s ease-out;
+}
+
+@keyframes hh_dlg_bubbleIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.hh_dlg_bubble_npc {
+  align-self: flex-start;
+}
+
+.hh_dlg_bubble_player {
+  align-self: flex-end;
+}
+
+.hh_dlg_bubble_label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  opacity: 0.5;
+  padding: 0 4px;
+}
+
+.hh_dlg_bubble_player .hh_dlg_bubble_label {
+  text-align: right;
+}
+
+.hh_dlg_bubble_text {
+  padding: 8px 12px;
+  border-radius: 12px;
+  line-height: 1.45;
+}
+
+.hh_dlg_bubble_npc .hh_dlg_bubble_text {
+  background: rgba(255, 255, 255, 0.08);
+  border-top-left-radius: 4px;
+}
+
+.hh_dlg_bubble_player .hh_dlg_bubble_text {
+  background: rgba(80, 130, 230, 0.25);
+  border-top-right-radius: 4px;
+}
+
+/* ─ Thinking indicator ─ */
+.hh_dlg_thinking {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 8px;
+}
+
+.hh_dlg_dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.3);
+  animation: hh_dlg_pulse 1.2s ease-in-out infinite;
+}
+
+.hh_dlg_dot:nth-child(2) { animation-delay: 0.2s; }
+.hh_dlg_dot:nth-child(3) { animation-delay: 0.4s; }
+
+@keyframes hh_dlg_pulse {
+  0%, 80%, 100% { opacity: 0.3; transform: scale(0.8); }
+  40% { opacity: 1; transform: scale(1.1); }
+}
+
+/* ─ Input area ─ */
+.hh_dlg_input_area {
+  display: flex;
+  gap: 8px;
+  padding: 10px 14px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.hh_dlg_input {
+  flex: 1;
+  appearance: none;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.06);
+  color: #e0e4ec;
+  font-size: 14px;
+  padding: 8px 12px;
+  border-radius: 10px;
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.hh_dlg_input::placeholder {
+  color: rgba(255, 255, 255, 0.3);
+}
+
+.hh_dlg_input:focus {
+  border-color: rgba(90, 140, 255, 0.5);
+}
+
+.hh_dlg_send {
+  appearance: none;
+  border: 0;
+  background: rgba(90, 140, 255, 0.85);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+  padding: 8px 16px;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.hh_dlg_send:hover {
+  background: rgba(90, 140, 255, 1);
+}
+
+/* ─ Action buttons ─ */
+.hh_dlg_actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 10px 14px 14px;
+}
+
+.hh_dlg_action_btn {
+  flex: 1 1 0;
+  min-width: 0;
+  appearance: none;
+  border: 0;
+  background: rgba(90, 140, 255, 0.8);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+  padding: 10px 8px;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background 0.15s, transform 0.1s;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.hh_dlg_action_btn:hover {
+  filter: brightness(1.15);
+}
+
+.hh_dlg_action_btn:active {
+  transform: scale(0.97);
+}

@@ -1,4 +1,5 @@
 import type { Patient, Staff, Room, HospitalEvent, Diagnosis } from "../hospital/types";
+import { Tuning } from "../config/tuning";
 
 const DIAGNOSES: Diagnosis[] = ["flu", "broken_bone", "food_poisoning", "headache", "mystery_rash"];
 
@@ -14,7 +15,7 @@ export class GameModel {
   events: HospitalEvent[] = [];
 
   private patientSpawnTimer = 0;
-  private patientSpawnInterval = 6; // seconds between spawns
+  private patientSpawnInterval = Tuning.patientSpawnIntervalSec;
 
   resetRun() {
     this.money = 500;
