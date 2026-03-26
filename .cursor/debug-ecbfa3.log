@@ -1,0 +1,94 @@
+{"sessionId":"ecbfa3","location":"main.ts:TOP","message":"main.ts module started executing","data":{},"timestamp":1774539474168}
+{"sessionId":"ecbfa3","location":"main.ts:IMPORTS_DONE","message":"All static imports resolved successfully","data":{},"timestamp":1774539474168}
+{"sessionId":"ecbfa3","location":"PlayState.ts:enter","message":"PlayState.enter() called","data":{},"timestamp":1774539474174}
+{"sessionId":"ecbfa3","location":"index.html:UNHANDLED_REJECTION","message":"unhandledrejection event","data":{"reason":"TypeError: Importing a module script failed.","stack":"none","type":"object"},"timestamp":1774539605053}
+{"sessionId":"ecbfa3","location":"ErrorOverlay.ts:show","message":"ErrorOverlay.show called","data":{"errorMessage":"Unhandled rejection: Importing a module script failed."},"timestamp":1774539605054}
+{"sessionId":"ecbfa3","location":"main.ts:TOP","message":"main.ts module started executing","data":{},"timestamp":1774539685040}
+{"sessionId":"ecbfa3","location":"main.ts:IMPORTS_DONE","message":"All static imports resolved successfully","data":{},"timestamp":1774539685040}
+{"sessionId":"ecbfa3","location":"PlayState.ts:enter","message":"PlayState.enter() called","data":{},"timestamp":1774539685045}
+{"sessionId":"ecbfa3","location":"index.html:UNHANDLED_REJECTION","message":"unhandledrejection event","data":{"reason":"TypeError: Importing a module script failed.","stack":"none","type":"object"},"timestamp":1774539687457}
+{"sessionId":"ecbfa3","location":"ErrorOverlay.ts:show","message":"ErrorOverlay.show called","data":{"errorMessage":"Unhandled rejection: Importing a module script failed."},"timestamp":1774539687457}
+{"sessionId":"ecbfa3","location":"main.ts:TOP","message":"main.ts module started executing","data":{},"timestamp":1774539945593}
+{"sessionId":"ecbfa3","location":"main.ts:IMPORTS_DONE","message":"All static imports resolved successfully","data":{},"timestamp":1774539945593}
+{"sessionId":"ecbfa3","location":"PlayState.ts:enter","message":"PlayState.enter() called","data":{},"timestamp":1774539945621}
+{"sessionId":"ecbfa3","location":"main.ts:TOP","message":"main.ts module started executing","data":{},"timestamp":1774540137452}
+{"sessionId":"ecbfa3","location":"main.ts:IMPORTS_DONE","message":"All static imports resolved successfully","data":{},"timestamp":1774540137452}
+{"sessionId":"ecbfa3","location":"PlayState.ts:enter","message":"PlayState.enter() called","data":{},"timestamp":1774540137471}
+{"sessionId":"ecbfa3","location":"main.ts:TOP","message":"main.ts module started executing","data":{},"timestamp":1774540137915}
+{"sessionId":"ecbfa3","location":"main.ts:IMPORTS_DONE","message":"All static imports resolved successfully","data":{},"timestamp":1774540137915}
+{"sessionId":"ecbfa3","location":"PlayState.ts:enter","message":"PlayState.enter() called","data":{},"timestamp":1774540137951}
+{"sessionId":"ecbfa3","location":"main.ts:TOP","message":"main.ts module started executing","data":{},"timestamp":1774540143323}
+{"sessionId":"ecbfa3","location":"main.ts:IMPORTS_DONE","message":"All static imports resolved successfully","data":{},"timestamp":1774540143323}
+{"sessionId":"ecbfa3","location":"PlayState.ts:enter","message":"PlayState.enter() called","data":{},"timestamp":1774540143341}
+{"sessionId":"ecbfa3","location":"main.ts:TOP","message":"main.ts module started executing","data":{},"timestamp":1774540143882}
+{"sessionId":"ecbfa3","location":"main.ts:IMPORTS_DONE","message":"All static imports resolved successfully","data":{},"timestamp":1774540143882}
+{"sessionId":"ecbfa3","location":"PlayState.ts:enter","message":"PlayState.enter() called","data":{},"timestamp":1774540143919}
+{"sessionId":"ecbfa3","location":"main.ts:TOP","message":"main.ts module started executing","data":{},"timestamp":1774540154861}
+{"sessionId":"ecbfa3","location":"main.ts:IMPORTS_DONE","message":"All static imports resolved successfully","data":{},"timestamp":1774540154861}
+{"sessionId":"ecbfa3","location":"PlayState.ts:enter","message":"PlayState.enter() called","data":{},"timestamp":1774540154878}
+{"sessionId":"ecbfa3","location":"main.ts:TOP","message":"main.ts module started executing","data":{},"timestamp":1774540154903}
+{"sessionId":"ecbfa3","location":"main.ts:IMPORTS_DONE","message":"All static imports resolved successfully","data":{},"timestamp":1774540154903}
+{"sessionId":"ecbfa3","location":"PlayState.ts:enter","message":"PlayState.enter() called","data":{},"timestamp":1774540154932}
+{"sessionId":"ecbfa3","location":"main.ts:TOP","message":"main.ts module started executing","data":{},"timestamp":1774540166262}
+{"sessionId":"ecbfa3","location":"main.ts:IMPORTS_DONE","message":"All static imports resolved successfully","data":{},"timestamp":1774540166262}
+{"sessionId":"ecbfa3","location":"PlayState.ts:enter","message":"PlayState.enter() called","data":{},"timestamp":1774540166278}
+{"sessionId":"ecbfa3","location":"main.ts:TOP","message":"main.ts module started executing","data":{},"timestamp":1774540166902}
+{"sessionId":"ecbfa3","location":"main.ts:IMPORTS_DONE","message":"All static imports resolved successfully","data":{},"timestamp":1774540166903}
+{"sessionId":"ecbfa3","location":"PlayState.ts:enter","message":"PlayState.enter() called","data":{},"timestamp":1774540166931}
+{"sessionId":"ecbfa3","location":"main.ts:TOP","message":"main.ts module started executing","data":{},"timestamp":1774540171447}
+{"sessionId":"ecbfa3","location":"main.ts:IMPORTS_DONE","message":"All static imports resolved successfully","data":{},"timestamp":1774540171448}
+{"sessionId":"ecbfa3","location":"PlayState.ts:enter","message":"PlayState.enter() called","data":{},"timestamp":1774540171464}
+{"sessionId":"ecbfa3","location":"main.ts:TOP","message":"main.ts module started executing","data":{},"timestamp":1774540172432}
+{"sessionId":"ecbfa3","location":"main.ts:IMPORTS_DONE","message":"All static imports resolved successfully","data":{},"timestamp":1774540172432}
+{"sessionId":"ecbfa3","location":"PlayState.ts:enter","message":"PlayState.enter() called","data":{},"timestamp":1774540172456}
+{"sessionId":"ecbfa3","location":"main.ts:TOP","message":"main.ts module started executing","data":{},"timestamp":1774540178788}
+{"sessionId":"ecbfa3","location":"main.ts:IMPORTS_DONE","message":"All static imports resolved successfully","data":{},"timestamp":1774540178788}
+{"sessionId":"ecbfa3","location":"PlayState.ts:enter","message":"PlayState.enter() called","data":{},"timestamp":1774540178806}
+{"sessionId":"ecbfa3","location":"main.ts:TOP","message":"main.ts module started executing","data":{},"timestamp":1774540178885}
+{"sessionId":"ecbfa3","location":"main.ts:IMPORTS_DONE","message":"All static imports resolved successfully","data":{},"timestamp":1774540178885}
+{"sessionId":"ecbfa3","location":"PlayState.ts:enter","message":"PlayState.enter() called","data":{},"timestamp":1774540178909}
+{"sessionId":"ecbfa3","location":"main.ts:TOP","message":"main.ts module started executing","data":{},"timestamp":1774540186286}
+{"sessionId":"ecbfa3","location":"main.ts:IMPORTS_DONE","message":"All static imports resolved successfully","data":{},"timestamp":1774540186286}
+{"sessionId":"ecbfa3","location":"PlayState.ts:enter","message":"PlayState.enter() called","data":{},"timestamp":1774540186301}
+{"sessionId":"ecbfa3","location":"main.ts:TOP","message":"main.ts module started executing","data":{},"timestamp":1774540186888}
+{"sessionId":"ecbfa3","location":"main.ts:IMPORTS_DONE","message":"All static imports resolved successfully","data":{},"timestamp":1774540186888}
+{"sessionId":"ecbfa3","location":"PlayState.ts:enter","message":"PlayState.enter() called","data":{},"timestamp":1774540186914}
+{"sessionId":"ecbfa3","location":"main.ts:TOP","message":"main.ts module started executing","data":{},"timestamp":1774540191562}
+{"sessionId":"ecbfa3","location":"main.ts:IMPORTS_DONE","message":"All static imports resolved successfully","data":{},"timestamp":1774540191562}
+{"sessionId":"ecbfa3","location":"PlayState.ts:enter","message":"PlayState.enter() called","data":{},"timestamp":1774540191577}
+{"sessionId":"ecbfa3","location":"main.ts:TOP","message":"main.ts module started executing","data":{},"timestamp":1774540191593}
+{"sessionId":"ecbfa3","location":"main.ts:IMPORTS_DONE","message":"All static imports resolved successfully","data":{},"timestamp":1774540191593}
+{"sessionId":"ecbfa3","location":"PlayState.ts:enter","message":"PlayState.enter() called","data":{},"timestamp":1774540191623}
+{"sessionId":"ecbfa3","location":"main.ts:TOP","message":"main.ts module started executing","data":{},"timestamp":1774540201476}
+{"sessionId":"ecbfa3","location":"main.ts:IMPORTS_DONE","message":"All static imports resolved successfully","data":{},"timestamp":1774540201476}
+{"sessionId":"ecbfa3","location":"PlayState.ts:enter","message":"PlayState.enter() called","data":{},"timestamp":1774540201494}
+{"sessionId":"ecbfa3","location":"main.ts:TOP","message":"main.ts module started executing","data":{},"timestamp":1774540201527}
+{"sessionId":"ecbfa3","location":"main.ts:IMPORTS_DONE","message":"All static imports resolved successfully","data":{},"timestamp":1774540201527}
+{"sessionId":"ecbfa3","location":"PlayState.ts:enter","message":"PlayState.enter() called","data":{},"timestamp":1774540201556}
+{"sessionId":"ecbfa3","location":"main.ts:TOP","message":"main.ts module started executing","data":{},"timestamp":1774540206485}
+{"sessionId":"ecbfa3","location":"main.ts:IMPORTS_DONE","message":"All static imports resolved successfully","data":{},"timestamp":1774540206485}
+{"sessionId":"ecbfa3","location":"PlayState.ts:enter","message":"PlayState.enter() called","data":{},"timestamp":1774540206502}
+{"sessionId":"ecbfa3","location":"main.ts:TOP","message":"main.ts module started executing","data":{},"timestamp":1774540206527}
+{"sessionId":"ecbfa3","location":"main.ts:IMPORTS_DONE","message":"All static imports resolved successfully","data":{},"timestamp":1774540206527}
+{"sessionId":"ecbfa3","location":"PlayState.ts:enter","message":"PlayState.enter() called","data":{},"timestamp":1774540206551}
+{"sessionId":"ecbfa3","location":"main.ts:TOP","message":"main.ts module started executing","data":{},"timestamp":1774540223571}
+{"sessionId":"ecbfa3","location":"main.ts:IMPORTS_DONE","message":"All static imports resolved successfully","data":{},"timestamp":1774540223571}
+{"sessionId":"ecbfa3","location":"PlayState.ts:enter","message":"PlayState.enter() called","data":{},"timestamp":1774540223594}
+{"sessionId":"ecbfa3","location":"main.ts:TOP","message":"main.ts module started executing","data":{},"timestamp":1774540223637}
+{"sessionId":"ecbfa3","location":"main.ts:IMPORTS_DONE","message":"All static imports resolved successfully","data":{},"timestamp":1774540223638}
+{"sessionId":"ecbfa3","location":"PlayState.ts:enter","message":"PlayState.enter() called","data":{},"timestamp":1774540223669}
+{"sessionId":"ecbfa3","location":"main.ts:TOP","message":"main.ts module started executing","data":{},"timestamp":1774540224670}
+{"sessionId":"ecbfa3","location":"main.ts:IMPORTS_DONE","message":"All static imports resolved successfully","data":{},"timestamp":1774540224671}
+{"sessionId":"ecbfa3","location":"PlayState.ts:enter","message":"PlayState.enter() called","data":{},"timestamp":1774540224690}
+{"sessionId":"ecbfa3","location":"main.ts:TOP","message":"main.ts module started executing","data":{},"timestamp":1774540224841}
+{"sessionId":"ecbfa3","location":"main.ts:IMPORTS_DONE","message":"All static imports resolved successfully","data":{},"timestamp":1774540224841}
+{"sessionId":"ecbfa3","location":"PlayState.ts:enter","message":"PlayState.enter() called","data":{},"timestamp":1774540224860}
+{"sessionId":"ecbfa3","location":"main.ts:TOP","message":"main.ts module started executing","data":{},"timestamp":1774540229843}
+{"sessionId":"ecbfa3","location":"main.ts:IMPORTS_DONE","message":"All static imports resolved successfully","data":{},"timestamp":1774540229844}
+{"sessionId":"ecbfa3","location":"PlayState.ts:enter","message":"PlayState.enter() called","data":{},"timestamp":1774540229861}
+{"sessionId":"ecbfa3","location":"main.ts:TOP","message":"main.ts module started executing","data":{},"timestamp":1774540234882}
+{"sessionId":"ecbfa3","location":"main.ts:IMPORTS_DONE","message":"All static imports resolved successfully","data":{},"timestamp":1774540234882}
+{"sessionId":"ecbfa3","location":"PlayState.ts:enter","message":"PlayState.enter() called","data":{},"timestamp":1774540234903}
+{"sessionId":"ecbfa3","location":"main.ts:TOP","message":"main.ts module started executing","data":{},"timestamp":1774540234937}
+{"sessionId":"ecbfa3","location":"main.ts:IMPORTS_DONE","message":"All static imports resolved successfully","data":{},"timestamp":1774540234937}
+{"sessionId":"ecbfa3","location":"PlayState.ts:enter","message":"PlayState.enter() called","data":{},"timestamp":1774540234961}

@@ -31,6 +31,8 @@ import { findPath } from "../world/pathfinding";
 import { enableHavokPhysics } from "../physics/enableHavokPhysics";
 import { addWallPhysics, resolveWallPenetrations } from "../physics/wallColliders";
 import type { WallAABB } from "../physics/wallColliders";
+import { createCharacterBody, disposeCharacterBody } from "../physics/CharacterPhysics";
+import type { PhysicsBody } from "@babylonjs/core/Physics/v2/physicsBody";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Simple NPC controller (moves toward target, used until P3 has full physics)
@@ -44,6 +46,7 @@ interface NpcAgent {
   path: Vector3[];
   speed: number;
   stateTimer: number; // generic timer for current action
+  facingYaw: number;  // visual facing direction (radians)
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -69,6 +72,7 @@ export class PlayState implements GameState {
 
   private npcAgents: NpcAgent[] = [];
   private nameTags = new Map<string, NameTag>();
+  private characterBodies = new Map<string, PhysicsBody>();
 
   /** When non-null, the player is directly controlling a nurse. */
   private nurseGrab: NurseGrabState | null = null;
@@ -202,8 +206,20 @@ export class PlayState implements GameState {
     this.hud.setReputation(ctx.model.reputation);
     this.hud.setTimer(ctx.model.shiftTimeLeft);
 
+    // ─── Havok physics (character colliders) ──────────────────────────────
+    await enableHavokPhysics(scene);
+
     // ─── Spawn initial staff (stub NPCs) ─────────────────────────────────
     this.spawnStubStaff(ctx, scene, shadowGenerator);
+
+    // ─── Post-physics: fix facing rotation & keep characters on ground ───
+    scene.onAfterPhysicsObservable.add(() => {
+      for (const agent of this.npcAgents) {
+        agent.root.position.y = 0;
+        agent.root.rotationQuaternion = null;
+        agent.root.rotation.set(0, agent.facingYaw, 0);
+      }
+    });
 
     // ─── Main game loop ──────────────────────────────────────────────────
     scene.onBeforeRenderObservable.add(() => {
@@ -411,6 +427,8 @@ export class PlayState implements GameState {
     this.cameraRig = null;
     this.hud?.teardown();
     this.hud = null;
+    for (const body of this.characterBodies.values()) disposeCharacterBody(body);
+    this.characterBodies.clear();
     this.npcAgents = [];
     for (const tag of this.nameTags.values()) tag.dispose();
     this.nameTags.clear();
@@ -454,6 +472,14 @@ export class PlayState implements GameState {
       box.material = mat;
       sg.addShadowCaster(box);
 
+      // Havok collider
+      const body = createCharacterBody(root, scene, {
+        radius: Tuning.npcColliderRadius,
+        height: 1.7,
+        mass: def.mass,
+      });
+      this.characterBodies.set(id, body);
+
       const staff: Staff = {
         id,
         role: def.role,
@@ -474,6 +500,7 @@ export class PlayState implements GameState {
                def.role === "doctor" ? Tuning.doctorMoveSpeed :
                Tuning.npcMoveSpeed,
         stateTimer: 0,
+        facingYaw: 0,
       });
 
       const tag = createNameTag(scene, root, def.role.toUpperCase(), def.role);
@@ -499,6 +526,14 @@ export class PlayState implements GameState {
     box.material = mat;
     sg.addShadowCaster(box);
 
+    // Havok collider
+    const body = createCharacterBody(root, this.scene!, {
+      radius: Tuning.npcColliderRadius,
+      height: 1.5,
+      mass: Tuning.defaultMass,
+    });
+    this.characterBodies.set(patient.id, body);
+
     const agent: NpcAgent = {
       data: patient,
       root,
@@ -506,6 +541,7 @@ export class PlayState implements GameState {
       path: [],
       speed: Tuning.patientMoveSpeed,
       stateTimer: 0,
+      facingYaw: 0,
     };
 
     // Start by moving toward reception
@@ -546,16 +582,27 @@ export class PlayState implements GameState {
         if (dist < Tuning.npcArrivalThreshold) {
           // Advance to next waypoint in the path, or stop
           agent.moveTarget = agent.path.length > 0 ? agent.path.shift()! : null;
+          const body = this.characterBodies.get(agent.data.id);
+          if (body) body.setLinearVelocity(Vector3.ZeroReadOnly);
         } else {
           const dir = to.scale(1 / Math.max(dist, 1e-6));
           const speed = isGrabbedNurse ? Tuning.nurseControlSpeed : agent.speed;
-          const step = Math.min(dist, speed * dt);
-          pos.addInPlace(dir.scale(step));
 
-          const yaw = Math.atan2(dir.x, dir.z);
-          agent.root.rotationQuaternion = null;
-          agent.root.rotation = new Vector3(0, yaw, 0);
+          // Move via Havok physics body (collision-resolved) or fallback to direct positioning
+          const body = this.characterBodies.get(agent.data.id);
+          if (body) {
+            body.setLinearVelocity(new Vector3(dir.x * speed, 0, dir.z * speed));
+          } else {
+            const step = Math.min(dist, speed * dt);
+            pos.addInPlace(dir.scale(step));
+          }
+
+          agent.facingYaw = Math.atan2(dir.x, dir.z);
         }
+      } else if (!isTetheredPatient && !agent.moveTarget) {
+        // No target — ensure physics body is stopped
+        const body = this.characterBodies.get(agent.data.id);
+        if (body) body.setLinearVelocity(Vector3.ZeroReadOnly);
       }
 
       // Patient pipeline logic (skip for tethered patient — player decides where they go)
@@ -789,6 +836,13 @@ export class PlayState implements GameState {
       this.nameTags.get(p.id)?.dispose();
       this.nameTags.delete(p.id);
 
+      // Dispose physics body
+      const body = this.characterBodies.get(p.id);
+      if (body) {
+        disposeCharacterBody(body);
+        this.characterBodies.delete(p.id);
+      }
+
       const agentIdx = this.npcAgents.findIndex((a) => a.data.id === p.id);
       if (agentIdx !== -1) {
         const agent = this.npcAgents[agentIdx]!;
@@ -973,7 +1027,7 @@ export class PlayState implements GameState {
     if (attachedPatientAgent) {
       const nursePos = nurseAgent.root.position;
       // Patient follows behind the nurse (opposite of nurse facing direction)
-      const nurseYaw = nurseAgent.root.rotation?.y ?? 0;
+      const nurseYaw = nurseAgent.facingYaw;
       const offsetX = -Math.sin(nurseYaw) * Tuning.nurseTetherOffset;
       const offsetZ = -Math.cos(nurseYaw) * Tuning.nurseTetherOffset;
       const targetPos = new Vector3(
@@ -981,18 +1035,24 @@ export class PlayState implements GameState {
         0,
         nursePos.z + offsetZ,
       );
-      // Smooth follow
+      // Smooth follow via velocity (physics-compatible)
       const patPos = attachedPatientAgent.root.position;
-      patPos.x += (targetPos.x - patPos.x) * 0.15;
-      patPos.z += (targetPos.z - patPos.z) * 0.15;
+      const dx = targetPos.x - patPos.x;
+      const dz = targetPos.z - patPos.z;
+      const followSpeed = 8; // lerp-like follow via velocity
+      const body = this.characterBodies.get(attachedPatientAgent.data.id);
+      if (body) {
+        body.setLinearVelocity(new Vector3(dx * followSpeed, 0, dz * followSpeed));
+      } else {
+        patPos.x += dx * 0.15;
+        patPos.z += dz * 0.15;
+      }
 
       // Face the nurse
       const toNurse = nursePos.subtract(patPos);
       toNurse.y = 0;
       if (toNurse.lengthSquared() > 0.01) {
-        const yaw = Math.atan2(toNurse.x, toNurse.z);
-        attachedPatientAgent.root.rotationQuaternion = null;
-        attachedPatientAgent.root.rotation = new Vector3(0, yaw, 0);
+        attachedPatientAgent.facingYaw = Math.atan2(toNurse.x, toNurse.z);
       }
     }
   }
