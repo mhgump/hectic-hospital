@@ -1,0 +1,696 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hectic Hospital — Merge Strategy</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+  :root {
+    --bg: #0d1117;
+    --surface: #161b22;
+    --surface-2: #1c2129;
+    --border: #30363d;
+    --text: #e6edf3;
+    --text-muted: #8b949e;
+    --accent: #00d4aa;
+    --accent-dim: #00d4aa22;
+    --accent-2: #58a6ff;
+    --orange: #f0883e;
+    --red: #f85149;
+    --green: #3fb950;
+    --purple: #bc8cff;
+    --yellow: #d29922;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Inter', -apple-system, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+    padding: 2rem;
+    max-width: 900px;
+    margin: 0 auto;
+  }
+
+  h1 {
+    font-size: 1.8rem;
+    font-weight: 700;
+    margin-bottom: 0.25rem;
+  }
+
+  .subtitle {
+    color: var(--text-muted);
+    font-size: 0.9rem;
+    letter-spacing: 0.03em;
+    margin-bottom: 2.5rem;
+  }
+
+  .section-label {
+    color: var(--text-muted);
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    margin-bottom: 1rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px dashed var(--border);
+  }
+
+  .callout {
+    border: 1px solid;
+    border-radius: 8px;
+    padding: 1rem 1.25rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .callout-critical {
+    background: #2a1215;
+    border-color: #f8514944;
+    border-left: 3px solid var(--red);
+  }
+
+  .callout-info {
+    background: #1a2332;
+    border-color: #1f4068;
+    border-left: 3px solid var(--accent-2);
+  }
+
+  .callout-success {
+    background: #0d2818;
+    border-color: #1a4028;
+    border-left: 3px solid var(--green);
+  }
+
+  .callout-title {
+    font-weight: 600;
+    font-size: 0.85rem;
+    margin-bottom: 0.35rem;
+  }
+
+  .callout-critical .callout-title { color: var(--red); }
+  .callout-info .callout-title { color: var(--accent-2); }
+  .callout-success .callout-title { color: var(--green); }
+
+  .callout p, .callout li {
+    font-size: 0.9rem;
+    color: var(--text-muted);
+  }
+
+  .callout code {
+    color: var(--accent);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.85em;
+    background: var(--accent-dim);
+    padding: 0.1em 0.35em;
+    border-radius: 3px;
+  }
+
+  .callout ul {
+    margin: 0.4rem 0 0 1.2rem;
+  }
+
+  .callout li {
+    margin-bottom: 0.25rem;
+  }
+
+  h2 {
+    font-size: 1.2rem;
+    font-weight: 700;
+    margin-bottom: 1rem;
+    margin-top: 0.5rem;
+  }
+
+  h3 {
+    font-size: 1rem;
+    font-weight: 600;
+    margin-bottom: 0.75rem;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 1.5rem;
+    font-size: 0.85rem;
+  }
+
+  thead th {
+    text-align: left;
+    color: var(--text-muted);
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    padding: 0.5rem 0.75rem;
+    border-bottom: 1px solid var(--border);
+  }
+
+  tbody td {
+    padding: 0.55rem 0.75rem;
+    border-bottom: 1px solid var(--border);
+    vertical-align: top;
+  }
+
+  tbody tr:last-child td {
+    border-bottom: none;
+  }
+
+  td code {
+    color: var(--accent);
+    background: var(--accent-dim);
+    padding: 0.1em 0.4em;
+    border-radius: 4px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.82em;
+    white-space: nowrap;
+  }
+
+  .tag {
+    display: inline-block;
+    font-size: 0.65rem;
+    padding: 0.1em 0.45em;
+    border-radius: 3px;
+    font-weight: 600;
+    vertical-align: middle;
+  }
+
+  .tag-sole { background: #0d3321; color: var(--green); }
+  .tag-shared { background: #3d1e00; color: var(--orange); }
+  .tag-never { background: #2a1215; color: var(--red); }
+
+  .divider {
+    border: none;
+    border-top: 1px solid var(--border);
+    margin: 2.5rem 0;
+  }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 1.5rem;
+    margin-bottom: 1.25rem;
+  }
+
+  .role-badge {
+    display: inline-block;
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    text-align: center;
+    line-height: 28px;
+    font-weight: 700;
+    font-size: 0.75rem;
+    margin-right: 0.35rem;
+    vertical-align: middle;
+  }
+
+  .role-badge.p1 { background: var(--accent); color: var(--bg); }
+  .role-badge.p2 { background: var(--accent-2); color: var(--bg); }
+  .role-badge.p3 { background: var(--purple); color: var(--bg); }
+
+  .branch-diagram {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1.5rem;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.82rem;
+    line-height: 1.8;
+    margin-bottom: 1.5rem;
+    overflow-x: auto;
+  }
+
+  .branch-diagram .branch { color: var(--accent-2); }
+  .branch-diagram .main { color: var(--green); }
+  .branch-diagram .comment { color: var(--text-muted); }
+  .branch-diagram .p1c { color: var(--accent); }
+  .branch-diagram .p2c { color: var(--accent-2); }
+  .branch-diagram .p3c { color: var(--purple); }
+
+  .timeline {
+    position: relative;
+    padding-left: 2rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .timeline::before {
+    content: '';
+    position: absolute;
+    left: 0.5rem;
+    top: 0.5rem;
+    bottom: 0.5rem;
+    width: 2px;
+    background: var(--border);
+  }
+
+  .timeline-item {
+    position: relative;
+    margin-bottom: 1.5rem;
+  }
+
+  .timeline-item:last-child {
+    margin-bottom: 0;
+  }
+
+  .timeline-dot {
+    position: absolute;
+    left: -1.75rem;
+    top: 0.35rem;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    border: 2px solid var(--accent);
+    background: var(--bg);
+  }
+
+  .timeline-dot.sync { background: var(--accent); }
+
+  .timeline-time {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.8rem;
+    color: var(--accent);
+    font-weight: 600;
+    margin-bottom: 0.25rem;
+  }
+
+  .timeline-title {
+    font-weight: 600;
+    font-size: 0.9rem;
+    margin-bottom: 0.25rem;
+  }
+
+  .timeline-desc {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+  }
+
+  .timeline-desc code {
+    color: var(--accent);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.85em;
+  }
+
+  .timeline-actions {
+    margin-top: 0.4rem;
+    font-size: 0.82rem;
+  }
+
+  .timeline-actions li {
+    color: var(--text-muted);
+    margin-bottom: 0.2rem;
+  }
+
+  .rule-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 1.25rem 1.5rem;
+    margin-bottom: 1rem;
+    display: flex;
+    gap: 1rem;
+    align-items: flex-start;
+  }
+
+  .rule-number {
+    flex-shrink: 0;
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    background: var(--accent-dim);
+    border: 1px solid var(--accent);
+    color: var(--accent);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 0.85rem;
+  }
+
+  .rule-content h4 {
+    font-size: 0.95rem;
+    font-weight: 600;
+    margin-bottom: 0.25rem;
+  }
+
+  .rule-content p {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+  }
+
+  .rule-content code {
+    color: var(--accent);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.9em;
+  }
+
+  .golden-rule {
+    background: linear-gradient(135deg, #1a2332 0%, #1a1a0d 100%);
+    border: 1px solid var(--yellow);
+    border-radius: 10px;
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+    text-align: center;
+  }
+
+  .golden-rule h3 {
+    color: var(--yellow);
+    font-size: 1.1rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .golden-rule p {
+    font-size: 0.95rem;
+    color: var(--text-muted);
+  }
+
+  .golden-rule code {
+    color: var(--accent);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.9em;
+  }
+
+  .golden-rule strong {
+    color: var(--text);
+  }
+
+  .danger-zone {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 1.25rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .danger-zone h4 {
+    color: var(--red);
+    font-size: 0.9rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .danger-zone ul {
+    margin-left: 1.2rem;
+    font-size: 0.85rem;
+    color: var(--text-muted);
+  }
+
+  .danger-zone li {
+    margin-bottom: 0.2rem;
+  }
+
+  .danger-zone code {
+    color: var(--accent);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.9em;
+  }
+
+  .cmd-block {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1rem 1.25rem;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.8rem;
+    line-height: 1.7;
+    overflow-x: auto;
+    margin-bottom: 1rem;
+    white-space: pre;
+  }
+
+  .cmd-block .prompt { color: var(--accent); }
+  .cmd-block .flag { color: var(--purple); }
+  .cmd-block .comment { color: var(--text-muted); }
+  .cmd-block .branch-name { color: var(--accent-2); }
+</style>
+</head>
+<body>
+
+<h1>Hectic Hospital — Merge Strategy</h1>
+<p class="subtitle">Zero-Conflict Git Workflow for a 6-Hour Hackathon Sprint</p>
+
+<!-- GOLDEN RULE -->
+<div class="golden-rule">
+  <h3>The Golden Rule</h3>
+  <p><strong>P1 is the only person who edits <code>PlayState.ts</code>.</strong><br>
+  That file is where everything meets. One owner = zero conflicts on the most critical file.<br>
+  Everyone else builds self-contained modules with <code>constructor</code>, <code>update(dt)</code>, and <code>dispose()</code>.</p>
+</div>
+
+<hr class="divider">
+
+<!-- 6 RULES -->
+<div class="section-label">The 6 Rules</div>
+
+<div class="rule-card">
+  <div class="rule-number">1</div>
+  <div class="rule-content">
+    <h4>Each person creates their OWN files</h4>
+    <p>Never edit the same file as someone else. Each person owns a set of files exclusively. See the ownership table below.</p>
+  </div>
+</div>
+
+<div class="rule-card">
+  <div class="rule-number">2</div>
+  <div class="rule-content">
+    <h4>P2 and P3 export clean APIs — P1 imports them</h4>
+    <p>P2 and P3 build standalone modules with a clear public interface. They don't wire anything into the game loop. P1 plugs their classes into <code>PlayState.ts</code>.</p>
+  </div>
+</div>
+
+<div class="rule-card">
+  <div class="rule-number">3</div>
+  <div class="rule-content">
+    <h4>Git branches per person, merge INTO P1's branch</h4>
+    <p>Three branches: <code>p1/gameplay</code>, <code>p2/graphics</code>, <code>p3/physics</code>. P1 merges the others in. Since files don't overlap, merges are conflict-free.</p>
+  </div>
+</div>
+
+<div class="rule-card">
+  <div class="rule-number">4</div>
+  <div class="rule-content">
+    <h4>Shared types file is written ONCE, then frozen</h4>
+    <p>P1 writes <code>src/hospital/types.ts</code> in the first 15 minutes. After that, nobody changes it without telling the group. If someone needs a new field, they message and P1 adds it.</p>
+  </div>
+</div>
+
+<div class="rule-card">
+  <div class="rule-number">5</div>
+  <div class="rule-content">
+    <h4>Each person has a standalone way to test</h4>
+    <p>P2 can render rooms without game logic. P3 can test circle collisions without real NPCs. P1 can stub P2/P3's classes with dummy data.</p>
+  </div>
+</div>
+
+<div class="rule-card">
+  <div class="rule-number">6</div>
+  <div class="rule-content">
+    <h4>Never edit <code>src/main.ts</code> unless absolutely necessary</h4>
+    <p>If someone must touch it (like adding a Babylon side-effect import), they tell the group and one person makes the change.</p>
+  </div>
+</div>
+
+<hr class="divider">
+
+<!-- FILE OWNERSHIP -->
+<div class="section-label">File Ownership Map</div>
+
+<div class="card">
+  <h3><span class="role-badge p1">P1</span> Gameplay / Engine — Exclusive Files</h3>
+  <table>
+    <thead><tr><th>File</th><th>Access</th></tr></thead>
+    <tbody>
+      <tr><td><code>src/states/PlayState.ts</code></td><td><span class="tag tag-sole">sole owner</span></td></tr>
+      <tr><td><code>src/game/GameModel.ts</code></td><td><span class="tag tag-sole">sole owner</span></td></tr>
+      <tr><td><code>src/hospital/types.ts</code></td><td><span class="tag tag-sole">sole owner</span></td></tr>
+      <tr><td><code>src/hospital/PatientPipeline.ts</code></td><td><span class="tag tag-sole">sole owner</span></td></tr>
+      <tr><td><code>src/hospital/agents/*.ts</code></td><td><span class="tag tag-sole">sole owner</span></td></tr>
+      <tr><td><code>src/hospital/PlayerActions.ts</code></td><td><span class="tag tag-sole">sole owner</span></td></tr>
+      <tr><td><code>src/ui/hud.ts</code></td><td><span class="tag tag-sole">sole owner</span></td></tr>
+      <tr><td><code>src/config/tuning.ts</code></td><td><span class="tag tag-shared">shared — coordinate</span></td></tr>
+    </tbody>
+  </table>
+</div>
+
+<div class="card">
+  <h3><span class="role-badge p2">P2</span> Graphics / Layout — Exclusive Files</h3>
+  <table>
+    <thead><tr><th>File</th><th>Access</th></tr></thead>
+    <tbody>
+      <tr><td><code>src/world/HospitalLayout.ts</code></td><td><span class="tag tag-sole">sole owner</span></td></tr>
+      <tr><td><code>src/world/Navigation.ts</code></td><td><span class="tag tag-sole">sole owner</span></td></tr>
+      <tr><td><code>src/world/CharacterFactory.ts</code></td><td><span class="tag tag-sole">sole owner</span></td></tr>
+      <tr><td><code>src/assets/assetIds.ts</code></td><td><span class="tag tag-sole">sole owner</span></td></tr>
+      <tr><td><code>src/assets/assetRegistry.ts</code></td><td><span class="tag tag-sole">sole owner</span></td></tr>
+      <tr><td><code>public/assets/models/*</code></td><td><span class="tag tag-sole">sole owner</span></td></tr>
+    </tbody>
+  </table>
+</div>
+
+<div class="card">
+  <h3><span class="role-badge p3">P3</span> Physics / Animations — Exclusive Files</h3>
+  <table>
+    <thead><tr><th>File</th><th>Access</th></tr></thead>
+    <tbody>
+      <tr><td><code>src/physics/CharacterPhysics.ts</code></td><td><span class="tag tag-sole">sole owner</span></td></tr>
+      <tr><td><code>src/physics/Forces.ts</code></td><td><span class="tag tag-sole">sole owner</span></td></tr>
+      <tr><td><code>src/physics/DragSystem.ts</code></td><td><span class="tag tag-sole">sole owner</span></td></tr>
+      <tr><td><code>src/player/CharacterAnimator.ts</code></td><td><span class="tag tag-sole">sole owner</span></td></tr>
+      <tr><td><code>src/hospital/InjurySystem.ts</code></td><td><span class="tag tag-sole">sole owner</span></td></tr>
+    </tbody>
+  </table>
+</div>
+
+<div class="danger-zone">
+  <h4>Danger Zone — Files Nobody Touches Alone</h4>
+  <ul>
+    <li><code>src/main.ts</code> — Only if absolutely necessary, one person at a time, tell the group first</li>
+    <li><code>src/config/tuning.ts</code> — P1 owns it but P2 may need camera values. Coordinate verbally.</li>
+    <li><code>package.json</code> / <code>package-lock.json</code> — Only one person installs deps at a time</li>
+  </ul>
+</div>
+
+<hr class="divider">
+
+<!-- GIT BRANCH WORKFLOW -->
+<div class="section-label">Git Branch Workflow</div>
+
+<div class="branch-diagram"><span class="main">main</span>
+ <span class="comment">├──</span> <span class="p1c">p1/gameplay</span>     <span class="comment">← P1 works here (owns PlayState, merges others in)</span>
+ <span class="comment">├──</span> <span class="p2c">p2/graphics</span>     <span class="comment">← P2 works here (never touches PlayState)</span>
+ <span class="comment">└──</span> <span class="p3c">p3/physics</span>      <span class="comment">← P3 works here (never touches PlayState)</span></div>
+
+<h3>Creating your branch</h3>
+<div class="cmd-block"><span class="comment"># Everyone runs this from main:</span>
+<span class="prompt">$</span> git checkout <span class="flag">-b</span> <span class="branch-name">p1/gameplay</span>   <span class="comment"># or p2/graphics, p3/physics</span>
+<span class="prompt">$</span> git push <span class="flag">-u</span> origin <span class="branch-name">p1/gameplay</span></div>
+
+<h3>At each sync point (P2 and P3)</h3>
+<div class="cmd-block"><span class="comment"># Commit and push your work:</span>
+<span class="prompt">$</span> git add .
+<span class="prompt">$</span> git commit <span class="flag">-m</span> "P2: hospital rooms and waypoints"
+<span class="prompt">$</span> git push</div>
+
+<h3>At each sync point (P1 — the integrator)</h3>
+<div class="cmd-block"><span class="comment"># Pull in P2 and P3's work:</span>
+<span class="prompt">$</span> git fetch origin
+<span class="prompt">$</span> git merge <span class="branch-name">origin/p2/graphics</span> <span class="flag">--no-edit</span>
+<span class="prompt">$</span> git merge <span class="branch-name">origin/p3/physics</span> <span class="flag">--no-edit</span>
+
+<span class="comment"># Wire their new systems into PlayState</span>
+<span class="comment"># Test, commit, push</span>
+<span class="prompt">$</span> git push</div>
+
+<h3>After P1 integrates (everyone)</h3>
+<div class="cmd-block"><span class="comment"># Rebase onto P1's integrated branch:</span>
+<span class="prompt">$</span> git fetch origin
+<span class="prompt">$</span> git rebase <span class="branch-name">origin/p1/gameplay</span>
+
+<span class="comment"># Since you own different files, this should be conflict-free</span></div>
+
+<hr class="divider">
+
+<!-- INTEGRATION TIMELINE -->
+<div class="section-label">Integration Schedule</div>
+
+<div class="timeline">
+
+  <div class="timeline-item">
+    <div class="timeline-dot sync"></div>
+    <div class="timeline-time">0:00 — Kickoff</div>
+    <div class="timeline-title">Everyone together (15 min)</div>
+    <div class="timeline-desc">P1 writes <code>types.ts</code>, strips sample game. Everyone agrees on coordinates, creates branches, splits.</div>
+  </div>
+
+  <div class="timeline-item">
+    <div class="timeline-dot"></div>
+    <div class="timeline-time">0:15 – 1:30</div>
+    <div class="timeline-title">Heads-down building</div>
+    <div class="timeline-desc">Each person works on their branch independently. No merges needed yet.</div>
+  </div>
+
+  <div class="timeline-item">
+    <div class="timeline-dot sync"></div>
+    <div class="timeline-time">1:30 — Sync 1</div>
+    <div class="timeline-title">First integration</div>
+    <div class="timeline-desc">P2 pushes room layout. P3 pushes basic circle collisions. P1 merges both, wires into PlayState.</div>
+    <ul class="timeline-actions">
+      <li>Quick test: Do rooms render? Do circles collide?</li>
+    </ul>
+  </div>
+
+  <div class="timeline-item">
+    <div class="timeline-dot"></div>
+    <div class="timeline-time">1:30 – 3:00</div>
+    <div class="timeline-title">Heads-down building</div>
+    <div class="timeline-desc">Everyone rebases from P1's branch, continues building on the integrated codebase.</div>
+  </div>
+
+  <div class="timeline-item">
+    <div class="timeline-dot sync"></div>
+    <div class="timeline-time">3:00 — Sync 2</div>
+    <div class="timeline-title">Second integration</div>
+    <div class="timeline-desc">P2 pushes character meshes + props. P3 pushes knockback + drag. P1 merges, connects NPCs to layout + physics.</div>
+    <ul class="timeline-actions">
+      <li>Quick test: Do NPCs walk between rooms and bump into each other?</li>
+    </ul>
+  </div>
+
+  <div class="timeline-item">
+    <div class="timeline-dot"></div>
+    <div class="timeline-time">3:00 – 4:30</div>
+    <div class="timeline-title">Heads-down building</div>
+    <div class="timeline-desc">Everyone rebases from P1, continues with polish and features.</div>
+  </div>
+
+  <div class="timeline-item">
+    <div class="timeline-dot sync"></div>
+    <div class="timeline-time">4:30 — Sync 3</div>
+    <div class="timeline-title">Final integration</div>
+    <div class="timeline-desc">P2 pushes visual polish. P3 pushes animations + injury events. P1 merges, connects full pipeline.</div>
+    <ul class="timeline-actions">
+      <li>Quick test: Full patient flow from entry to exit?</li>
+    </ul>
+  </div>
+
+  <div class="timeline-item">
+    <div class="timeline-dot sync"></div>
+    <div class="timeline-time">5:00 – 6:00</div>
+    <div class="timeline-title">Final hour — everyone on one branch</div>
+    <div class="timeline-desc">Merge P1's branch to <code>main</code>. Everyone works on <code>main</code> together. Bug fixes, tuning, demo prep. <strong>No more separate branches.</strong></div>
+  </div>
+
+</div>
+
+<hr class="divider">
+
+<!-- WHY THIS WORKS -->
+<div class="section-label">Why This Works</div>
+
+<div class="card">
+  <table>
+    <thead><tr><th>Principle</th><th>Effect</th></tr></thead>
+    <tbody>
+      <tr><td>Each person owns their files exclusively</td><td>Git merges are always conflict-free</td></tr>
+      <tr><td><code>PlayState.ts</code> has a single owner (P1)</td><td>The critical orchestrator file never conflicts</td></tr>
+      <tr><td>P2/P3 export clean APIs, P1 imports</td><td>Modules are independently testable</td></tr>
+      <tr><td>Shared types written once, then frozen</td><td>Everyone codes against the same contract</td></tr>
+      <tr><td>Sync every 90 minutes</td><td>Problems caught early, never 4+ hours of drift</td></tr>
+      <tr><td>Final hour on one branch</td><td>No last-minute merge panic</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<div class="callout callout-success">
+  <div class="callout-title">If you follow these rules</div>
+  <p>You will spend <strong>zero minutes</strong> on merge conflicts and all your time on building the game. The only coordination needed is a quick Slack/Discord message at sync points: "Pushed, ready for merge."</p>
+</div>
+
+<hr class="divider">
+
+<p style="color: var(--text-muted); font-size: 0.8rem; text-align: center;">Hectic Hospital — Merge Strategy &middot; 2026</p>
+
+</body>
+</html>

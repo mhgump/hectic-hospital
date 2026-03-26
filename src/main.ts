@@ -122,7 +122,10 @@ if (Runtime.e2e) {
     getModel: () => {
       const m = game.getModel();
       return {
-        score: m.score,
+        money: m.money,
+        reputation: m.reputation,
+        shiftTimeLeft: m.shiftTimeLeft,
+        patientCount: m.getActivePatients().length,
       };
     },
     getPlayerPos: () => {

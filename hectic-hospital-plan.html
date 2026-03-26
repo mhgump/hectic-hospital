@@ -1,0 +1,659 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hectic Hospital — 6-Hour Sprint Plan</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+  :root {
+    --bg: #0d1117;
+    --surface: #161b22;
+    --surface-2: #1c2129;
+    --border: #30363d;
+    --text: #e6edf3;
+    --text-muted: #8b949e;
+    --accent: #00d4aa;
+    --accent-dim: #00d4aa22;
+    --accent-2: #58a6ff;
+    --orange: #f0883e;
+    --red: #f85149;
+    --green: #3fb950;
+    --purple: #bc8cff;
+    --yellow: #d29922;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Inter', -apple-system, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+    padding: 2rem;
+    max-width: 900px;
+    margin: 0 auto;
+  }
+
+  h1 {
+    font-size: 1.8rem;
+    font-weight: 700;
+    margin-bottom: 0.25rem;
+  }
+
+  .subtitle {
+    color: var(--text-muted);
+    font-size: 0.9rem;
+    letter-spacing: 0.03em;
+    margin-bottom: 2.5rem;
+  }
+
+  .subtitle code {
+    color: var(--accent);
+    background: var(--accent-dim);
+    padding: 0.15em 0.45em;
+    border-radius: 4px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.85em;
+  }
+
+  .callout {
+    background: #1a2332;
+    border: 1px solid #1f4068;
+    border-left: 3px solid var(--orange);
+    border-radius: 8px;
+    padding: 1rem 1.25rem;
+    margin-bottom: 2.5rem;
+  }
+
+  .callout-title {
+    color: var(--orange);
+    font-weight: 600;
+    font-size: 0.85rem;
+    margin-bottom: 0.35rem;
+  }
+
+  .callout-title::before {
+    content: "⚠ ";
+  }
+
+  .callout p {
+    font-size: 0.9rem;
+    color: var(--text-muted);
+  }
+
+  .callout code {
+    color: var(--accent);
+    font-weight: 600;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.85em;
+  }
+
+  .section-label {
+    color: var(--text-muted);
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    margin-bottom: 1rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px dashed var(--border);
+  }
+
+  .role-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 1.5rem;
+    margin-bottom: 1.25rem;
+  }
+
+  .role-header {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 0.35rem;
+  }
+
+  .role-badge {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 0.8rem;
+    flex-shrink: 0;
+  }
+
+  .role-badge.p1 { background: var(--accent); color: var(--bg); }
+  .role-badge.p2 { background: var(--accent-2); color: var(--bg); }
+  .role-badge.p3 { background: var(--purple); color: var(--bg); }
+
+  .role-name {
+    font-weight: 700;
+    font-size: 1.05rem;
+  }
+
+  .role-owns {
+    color: var(--text-muted);
+    font-size: 0.8rem;
+    margin-left: 2.8rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .role-desc {
+    color: var(--text-muted);
+    font-size: 0.9rem;
+    margin-bottom: 1rem;
+    margin-left: 2.8rem;
+  }
+
+  .role-card h4 {
+    font-size: 0.85rem;
+    font-weight: 600;
+    margin-bottom: 0.6rem;
+    margin-left: 0;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 1.25rem;
+    font-size: 0.85rem;
+  }
+
+  thead th {
+    text-align: left;
+    color: var(--text-muted);
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    padding: 0.5rem 0.75rem;
+    border-bottom: 1px solid var(--border);
+  }
+
+  tbody td {
+    padding: 0.55rem 0.75rem;
+    border-bottom: 1px solid var(--border);
+    vertical-align: top;
+  }
+
+  tbody tr:last-child td {
+    border-bottom: none;
+  }
+
+  td code {
+    color: var(--accent);
+    background: var(--accent-dim);
+    padding: 0.1em 0.4em;
+    border-radius: 4px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.82em;
+    white-space: nowrap;
+  }
+
+  .tag {
+    display: inline-block;
+    font-size: 0.65rem;
+    padding: 0.1em 0.45em;
+    border-radius: 3px;
+    margin-left: 0.4em;
+    vertical-align: middle;
+    font-weight: 500;
+  }
+
+  .tag-new { background: #0d3321; color: var(--green); }
+  .tag-rewrite { background: #3d1e00; color: var(--orange); }
+  .tag-update { background: #1c2541; color: var(--accent-2); }
+  .tag-folder { background: #1f1538; color: var(--purple); }
+
+  .hour-table td:first-child {
+    white-space: nowrap;
+    font-weight: 600;
+    color: var(--accent);
+    width: 70px;
+  }
+
+  .contract {
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 0.75rem 1rem;
+    margin-top: 0.5rem;
+    font-size: 0.82rem;
+    color: var(--text-muted);
+  }
+
+  .contract strong {
+    color: var(--text);
+  }
+
+  .contract ul {
+    margin: 0.4rem 0 0 1.2rem;
+  }
+
+  .contract li {
+    margin-bottom: 0.2rem;
+  }
+
+  .contract code {
+    color: var(--accent);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.9em;
+  }
+
+  .divider {
+    border: none;
+    border-top: 1px solid var(--border);
+    margin: 2.5rem 0;
+  }
+
+  .code-block {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1.25rem;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.8rem;
+    line-height: 1.7;
+    overflow-x: auto;
+    margin-bottom: 1.25rem;
+    white-space: pre;
+  }
+
+  .code-block .kw { color: var(--purple); }
+  .code-block .type { color: var(--accent-2); }
+  .code-block .str { color: var(--green); }
+  .code-block .comment { color: var(--text-muted); }
+  .code-block .prop { color: var(--text); }
+  .code-block .val { color: var(--orange); }
+
+  .scope-section {
+    margin-bottom: 2rem;
+  }
+
+  .scope-section h3 {
+    font-size: 1rem;
+    font-weight: 600;
+    margin-bottom: 0.75rem;
+  }
+
+  .scope-list {
+    list-style: none;
+    padding: 0;
+  }
+
+  .scope-list li {
+    padding: 0.4rem 0;
+    font-size: 0.9rem;
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+
+  .scope-list li::before {
+    flex-shrink: 0;
+    font-size: 0.85rem;
+  }
+
+  .scope-list.yes li::before { content: "✅"; }
+  .scope-list.no li::before { content: "❌"; }
+
+  .pipeline-visual {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1.25rem;
+    text-align: center;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.85rem;
+    margin-bottom: 1.5rem;
+    overflow-x: auto;
+    white-space: nowrap;
+  }
+
+  .pipeline-visual .step {
+    display: inline-block;
+    background: var(--accent-dim);
+    border: 1px solid var(--accent);
+    border-radius: 6px;
+    padding: 0.35rem 0.75rem;
+    margin: 0.25rem;
+    color: var(--accent);
+    font-weight: 500;
+    font-size: 0.78rem;
+  }
+
+  .pipeline-visual .arrow {
+    color: var(--text-muted);
+    margin: 0 0.15rem;
+    font-size: 0.9rem;
+  }
+
+  .game-vision {
+    background: linear-gradient(135deg, #0d2137 0%, #1a0d2e 100%);
+    border: 1px solid #2a3a5a;
+    border-radius: 10px;
+    padding: 1.5rem;
+    margin-bottom: 2.5rem;
+  }
+
+  .game-vision h3 {
+    font-size: 1rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .game-vision p {
+    color: var(--text-muted);
+    font-size: 0.9rem;
+  }
+
+  .game-vision .formula {
+    font-family: 'JetBrains Mono', monospace;
+    color: var(--accent);
+    font-size: 0.85rem;
+    margin-top: 0.75rem;
+    padding: 0.5rem 0.75rem;
+    background: #00000033;
+    border-radius: 6px;
+    display: inline-block;
+  }
+
+  .first-15 {
+    background: var(--surface);
+    border: 1px solid var(--accent);
+    border-radius: 10px;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .first-15 h3 {
+    color: var(--accent);
+    font-size: 1rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .first-15 ol {
+    margin-left: 1.2rem;
+    font-size: 0.9rem;
+  }
+
+  .first-15 li {
+    margin-bottom: 0.35rem;
+  }
+
+  .first-15 code {
+    color: var(--accent);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.85em;
+  }
+</style>
+</head>
+<body>
+
+<h1>Hectic Hospital — 6-Hour Sprint Plan</h1>
+<p class="subtitle">3-Person Team Breakdown &middot; <code>Babylon.js</code> + Havok Physics</p>
+
+<div class="callout">
+  <div class="callout-title">Important: Engine Note</div>
+  <p>This repo uses <code>Babylon.js</code>, not Three.js. The architecture supports everything you need — just be aware so nobody wastes time trying to swap engines.</p>
+</div>
+
+<!-- GAME VISION -->
+<div class="game-vision">
+  <h3>What We're Building</h3>
+  <p>A top-down hospital pipeline sim. Patients enter, get checked in, diagnosed, and treated. You earn money on heals, lose money on lawsuits. Chaos ensues — bumping, knockbacks, accidental injuries. Think:</p>
+  <div class="formula">Two Point Hospital + Overcooked chaos + "Stabby McStab" surprises</div>
+</div>
+
+<!-- PATIENT PIPELINE -->
+<div class="section-label">Patient Pipeline</div>
+<div class="pipeline-visual">
+  <span class="step">ENTER</span>
+  <span class="arrow">→</span>
+  <span class="step">RECEPTION</span>
+  <span class="arrow">→</span>
+  <span class="step">WAITING</span>
+  <span class="arrow">→</span>
+  <span class="step">ROOM</span>
+  <span class="arrow">→</span>
+  <span class="step">TREATMENT</span>
+  <span class="arrow">→</span>
+  <span class="step">EXIT</span>
+</div>
+
+<!-- TEAM ROLES -->
+<div class="section-label">Team Roles</div>
+
+<!-- P1 -->
+<div class="role-card">
+  <div class="role-header">
+    <div class="role-badge p1">P1</div>
+    <span class="role-name">Gameplay / Engine Engineer</span>
+  </div>
+  <div class="role-owns">Owns: Game model &middot; NPC pipeline &middot; player interaction &middot; UI</div>
+  <div class="role-desc">You're the backbone. Everything else plugs into your systems.</div>
+
+  <h4>Files to Create / Rewrite</h4>
+  <table>
+    <thead><tr><th>What</th><th>Where</th></tr></thead>
+    <tbody>
+      <tr><td>Hospital game model (money, patient list, staff roster)</td><td><code>src/game/GameModel.ts</code> <span class="tag tag-rewrite">rewrite</span></td></tr>
+      <tr><td>Patient state machine (ENTER → RECEPTION → WAITING → ROOM → TREATMENT → EXIT)</td><td><code>src/hospital/PatientPipeline.ts</code> <span class="tag tag-new">new</span></td></tr>
+      <tr><td>NPC agent system (receptionist, nurse, doctor behaviors)</td><td><code>src/hospital/agents/</code> <span class="tag tag-folder">new folder</span></td></tr>
+      <tr><td>Player interaction (click NPC → see info, override decisions)</td><td><code>src/hospital/PlayerActions.ts</code> <span class="tag tag-new">new</span></td></tr>
+      <tr><td>HUD (money, patient queue, alerts)</td><td><code>src/ui/hud.ts</code> <span class="tag tag-rewrite">rewrite</span></td></tr>
+      <tr><td>Main orchestrator</td><td><code>src/states/PlayState.ts</code> <span class="tag tag-rewrite">rewrite</span></td></tr>
+      <tr><td>Tuning values (speeds, costs, timers)</td><td><code>src/config/tuning.ts</code> <span class="tag tag-update">update</span></td></tr>
+    </tbody>
+  </table>
+
+  <h4>Hour-by-Hour</h4>
+  <table class="hour-table">
+    <thead><tr><th>Hour</th><th>Task</th></tr></thead>
+    <tbody>
+      <tr><td>0–1</td><td>Rewrite <code>GameModel</code> (money, patients array, staff array). Define patient/staff interfaces. Stub out <code>PatientPipeline</code> state machine. Delete sample game code from <code>PlayState</code>.</td></tr>
+      <tr><td>1–2</td><td>Build NPC agent loop: each agent has a role, state, target, <code>update(dt)</code>. Receptionist accepts/rejects. Nurse picks up patient. Doctor treats. All driven by simple state machines.</td></tr>
+      <tr><td>2–3</td><td>Wire agents to P2's waypoints (room positions). NPCs move between waypoints based on pipeline state. Patient spawner on a timer.</td></tr>
+      <tr><td>3–4</td><td>Player interaction: tap NPC → show info panel. Tap staff → redirect them. Override receptionist. Basic money: +$$ on heal, -$$ on lawsuit.</td></tr>
+      <tr><td>4–5</td><td>Polish the pipeline. Add "dangerous patient" archetype (rare). Connect P3's collision events → injury. Results state when shift ends.</td></tr>
+      <tr><td>5–6</td><td>Integration, bug fixes, demo prep.</td></tr>
+    </tbody>
+  </table>
+
+  <div class="contract">
+    <strong>Contract with P2 &amp; P3:</strong>
+    <ul>
+      <li>You define the interfaces (<code>Patient</code>, <code>Staff</code>, <code>Room</code>, <code>HospitalEvent</code>)</li>
+      <li>You consume their systems via simple APIs: <code>layout.getRoomPosition("surgery")</code>, <code>physics.onCollision(a, b)</code></li>
+    </ul>
+  </div>
+</div>
+
+<!-- P2 -->
+<div class="role-card">
+  <div class="role-header">
+    <div class="role-badge p2">P2</div>
+    <span class="role-name">Graphics / Layout / Navigation</span>
+  </div>
+  <div class="role-owns">Owns: Hospital environment &middot; room layout &middot; pathfinding &middot; models &middot; visual identity</div>
+  <div class="role-desc">You make the world exist and look good.</div>
+
+  <h4>Files to Create / Modify</h4>
+  <table>
+    <thead><tr><th>What</th><th>Where</th></tr></thead>
+    <tbody>
+      <tr><td>Hospital room builder (positions, walls, floors)</td><td><code>src/world/HospitalLayout.ts</code> <span class="tag tag-new">new</span></td></tr>
+      <tr><td>Room waypoints / nav points</td><td><code>src/world/Navigation.ts</code> <span class="tag tag-new">new</span></td></tr>
+      <tr><td>Asset registration for hospital models</td><td><code>src/assets/assetIds.ts</code> <span class="tag tag-update">update</span></td></tr>
+      <tr><td>Asset paths</td><td><code>src/assets/assetRegistry.ts</code> <span class="tag tag-update">update</span></td></tr>
+      <tr><td>Camera tuning for hospital top-down view</td><td><code>src/config/tuning.ts</code> <span class="tag tag-update">update</span></td></tr>
+      <tr><td>Character mesh factory (patient vs staff appearance)</td><td><code>src/world/CharacterFactory.ts</code> <span class="tag tag-new">new</span></td></tr>
+    </tbody>
+  </table>
+
+  <h4>Hour-by-Hour</h4>
+  <table class="hour-table">
+    <thead><tr><th>Hour</th><th>Task</th></tr></thead>
+    <tbody>
+      <tr><td>0–1</td><td>Sketch floor plan (5 min). Build it in code: 4 rooms as positioned box meshes with floors. Reception near entrance, waiting room, 2 patient rooms, doctor office. Export room positions as data structure P1 can consume.</td></tr>
+      <tr><td>1–2</td><td>Add waypoint graph: door positions, room centers, hallway paths. Simple array of <code>{id, position, connections}</code>. NPCs will lerp between these. Tune the orthographic camera to frame the whole hospital.</td></tr>
+      <tr><td>2–3</td><td>Character meshes — check <code>kenney/kenneyassets.md</code> for usable models. Differentiate patients (color/hat) vs nurses vs doctors. Load via <code>loadModelContainer</code>.</td></tr>
+      <tr><td>3–4</td><td>Props: beds, desks, reception counter, waiting chairs. These double as obstacles. Room labels or floor markings for clarity.</td></tr>
+      <tr><td>4–5</td><td>Visual feedback: highlight selected NPC, show path indicators, room state (occupied/free). Lighting polish.</td></tr>
+      <tr><td>5–6</td><td>Integration, camera tweaks, visual bugs.</td></tr>
+    </tbody>
+  </table>
+
+  <div class="contract">
+    <strong>Contract with P1:</strong>
+    <ul>
+      <li>Export <code>getRoomPosition(roomId): Vector3</code> and <code>getWaypoints(): Waypoint[]</code></li>
+      <li>Export <code>spawnCharacterMesh(role): TransformNode</code> for P1 to attach agents to</li>
+      <li>Add spawned props to the shared <code>obstacles[]</code> array for P3</li>
+    </ul>
+  </div>
+</div>
+
+<!-- P3 -->
+<div class="role-card">
+  <div class="role-header">
+    <div class="role-badge p3">P3</div>
+    <span class="role-name">Physics &amp; Animations</span>
+  </div>
+  <div class="role-owns">Owns: Character collisions &middot; push / knockback &middot; drag mechanic &middot; animation states</div>
+  <div class="role-desc">You make the world feel alive and chaotic.</div>
+
+  <h4>Files to Create / Modify</h4>
+  <table>
+    <thead><tr><th>What</th><th>Where</th></tr></thead>
+    <tbody>
+      <tr><td>Character collision system</td><td><code>src/physics/CharacterPhysics.ts</code> <span class="tag tag-new">new</span></td></tr>
+      <tr><td>Knockback / push mechanics</td><td><code>src/physics/Forces.ts</code> <span class="tag tag-new">new</span></td></tr>
+      <tr><td>"Drag patient" constraint</td><td><code>src/physics/DragSystem.ts</code> <span class="tag tag-new">new</span></td></tr>
+      <tr><td>Animation state controller</td><td><code>src/player/CharacterAnimator.ts</code> <span class="tag tag-rewrite">rewrite</span></td></tr>
+      <tr><td>Injury event emitter</td><td><code>src/hospital/InjurySystem.ts</code> <span class="tag tag-new">new</span></td></tr>
+    </tbody>
+  </table>
+
+  <h4>Hour-by-Hour</h4>
+  <table class="hour-table">
+    <thead><tr><th>Hour</th><th>Task</th></tr></thead>
+    <tbody>
+      <tr><td>0–1</td><td>Start with circle-collider kinematic (the repo already does this). Each NPC gets a position, radius, velocity. Circle-circle resolution for all characters. Skip Havok for characters.</td></tr>
+      <tr><td>1–2</td><td>Implement mass-based push: when two circles overlap, apply separation force weighted by mass. Fat character → high mass → pushes others. Fast character → high velocity → bigger impact. Add <code>onCollision</code> callback.</td></tr>
+      <tr><td>2–3</td><td>"Drag patient" mechanic: nurse attaches to patient, patient follows with slight lag (spring/lerp). If nurse collides hard while dragging → patient gets injured (emit event).</td></tr>
+      <tr><td>3–4</td><td>Animation controller: define states (idle, walk, interact, stunned/fall). Hook into P2's character meshes. Play correct animation based on agent state.</td></tr>
+      <tr><td>4–5</td><td>Chaos tuning: knockback threshold, stun duration, injury severity. Make it feel funny, not realistic.</td></tr>
+      <tr><td>5–6</td><td>Integration, physics bugs, animation polish.</td></tr>
+    </tbody>
+  </table>
+
+  <div class="contract">
+    <strong>Contract with P1:</strong>
+    <ul>
+      <li>Export <code>updatePhysics(entities[], dt)</code> that P1 calls each frame</li>
+      <li>Export <code>onCollision: (a, b, force) => void</code> callback</li>
+      <li>Export <code>startDrag(nurse, patient)</code> / <code>stopDrag(nurse)</code></li>
+      <li>Export <code>setAnimState(entity, state)</code></li>
+    </ul>
+  </div>
+</div>
+
+<hr class="divider">
+
+<!-- SHARED TYPES -->
+<div class="section-label">Shared Types — P1 writes this in the first 15 minutes</div>
+
+<div class="code-block"><span class="comment">// src/hospital/types.ts</span>
+
+<span class="kw">export interface</span> <span class="type">Room</span> {
+  <span class="prop">id</span>: <span class="type">string</span>;          <span class="comment">// "reception" | "waiting" | "surgery" | "office"</span>
+  <span class="prop">position</span>: <span class="type">Vector3</span>;
+  <span class="prop">waypoints</span>: <span class="type">Vector3</span>[];
+}
+
+<span class="kw">export interface</span> <span class="type">Patient</span> {
+  <span class="prop">id</span>: <span class="type">string</span>;
+  <span class="prop">state</span>: <span class="str">"entering"</span> | <span class="str">"reception"</span> | <span class="str">"waiting"</span> | <span class="str">"assigned"</span> | <span class="str">"treatment"</span> | <span class="str">"exiting"</span>;
+  <span class="prop">health</span>: <span class="type">number</span>;      <span class="comment">// 0–1</span>
+  <span class="prop">patience</span>: <span class="type">number</span>;    <span class="comment">// 0–1, leaves if 0</span>
+  <span class="prop">dangerous</span>: <span class="type">boolean</span>;
+  <span class="prop">diagnosis</span>: <span class="type">string</span> | <span class="val">null</span>;
+  <span class="prop">mesh</span>: <span class="type">TransformNode</span> | <span class="val">null</span>;
+}
+
+<span class="kw">export interface</span> <span class="type">Staff</span> {
+  <span class="prop">id</span>: <span class="type">string</span>;
+  <span class="prop">role</span>: <span class="str">"receptionist"</span> | <span class="str">"nurse"</span> | <span class="str">"doctor"</span>;
+  <span class="prop">state</span>: <span class="str">"idle"</span> | <span class="str">"working"</span> | <span class="str">"moving"</span>;
+  <span class="prop">target</span>: <span class="type">Vector3</span> | <span class="val">null</span>;
+  <span class="prop">assignedPatient</span>: <span class="type">string</span> | <span class="val">null</span>;
+  <span class="prop">mesh</span>: <span class="type">TransformNode</span> | <span class="val">null</span>;
+}
+
+<span class="kw">export interface</span> <span class="type">HospitalEvent</span> {
+  <span class="prop">type</span>: <span class="str">"injury"</span> | <span class="str">"heal"</span> | <span class="str">"attack"</span> | <span class="str">"collision"</span>;
+  <span class="prop">sourceId</span>: <span class="type">string</span>;
+  <span class="prop">targetId</span>: <span class="type">string</span>;
+  <span class="prop">severity</span>: <span class="type">number</span>;
+}</div>
+
+<hr class="divider">
+
+<!-- FIRST 15 MINUTES -->
+<div class="first-15">
+  <h3>First 15 Minutes — Everyone Together</h3>
+  <ol>
+    <li>P1 creates <code>src/hospital/types.ts</code> with shared interfaces</li>
+    <li>P1 strips sample game from <code>PlayState</code> (delete crystal/dog/machine code)</li>
+    <li>P2 sketches room layout on paper, agrees on coordinates</li>
+    <li>P3 reads the existing <code>PlayerController</code> circle-collision code to understand the pattern</li>
+    <li>Everyone agrees on the coordinate system and scale</li>
+    <li>Everyone creates their branch and splits</li>
+  </ol>
+</div>
+
+<hr class="divider">
+
+<!-- MVP SCOPE -->
+<div class="section-label">MVP Scope — What's Realistic in 6 Hours</div>
+
+<div class="scope-section">
+  <h3 style="color: var(--green);">Achievable (build this)</h3>
+  <ul class="scope-list yes">
+    <li>4 visible rooms with basic props</li>
+    <li>Patients auto-enter, flow through pipeline</li>
+    <li>Receptionist auto-accepts (player can reject)</li>
+    <li>Nurse moves patient to room (with drag physics)</li>
+    <li>Doctor treats (success/fail dice roll)</li>
+    <li>Money counter goes up / down</li>
+    <li>NPCs bump into each other → knockback</li>
+    <li>1 "dangerous patient" type (Stabby McStab)</li>
+    <li>Tap to select NPC + see info</li>
+  </ul>
+</div>
+
+<div class="scope-section">
+  <h3 style="color: var(--red);">Cut for V1 (don't touch)</h3>
+  <ul class="scope-list no">
+    <li>AI dialogue / LLM integration</li>
+    <li>Item throwing physics</li>
+    <li>Surgery minigame</li>
+    <li>Procedural room generation</li>
+    <li>Sound design (add last if time)</li>
+    <li>Results screen (just restart the loop)</li>
+    <li>Full ragdoll physics</li>
+  </ul>
+</div>
+
+<hr class="divider">
+
+<p style="color: var(--text-muted); font-size: 0.8rem; text-align: center;">Hectic Hospital — Hackathon Sprint Plan &middot; 2026</p>
+
+</body>
+</html>
