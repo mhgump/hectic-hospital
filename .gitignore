@@ -3,3 +3,6 @@ quaternius-animation-library-GLB/
 quaternius-characters-GLB/
 **/dist
 **/node_modules
+.env
+.env.*
+!.env.example

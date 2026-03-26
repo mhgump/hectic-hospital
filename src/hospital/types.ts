@@ -40,6 +40,10 @@ export interface Patient {
   assignedRoom: string | null;
   assignedDoctor: string | null;
   mesh: TransformNode | null;
+
+  /** NPC preset identity — null only for legacy/stub patients */
+  presetId: string | null;
+  displayName: string | null;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

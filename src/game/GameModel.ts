@@ -1,5 +1,6 @@
 import type { Patient, Staff, Room, HospitalEvent, Diagnosis } from "../hospital/types";
 import { Tuning } from "../config/tuning";
+import { pickRandomPreset } from "../hospital/npcPresets";
 
 const DIAGNOSES: Diagnosis[] = ["flu", "broken_bone", "food_poisoning", "headache", "mystery_rash"];
 
@@ -32,18 +33,26 @@ export class GameModel {
   /** Create a new patient data object. Mesh is assigned later by the graphics layer. */
   spawnPatient(): Patient {
     const id = `patient_${nextPatientId++}`;
-    const dangerous = Math.random() < 0.1; // 10% chance
-    const diagnosis = DIAGNOSES[Math.floor(Math.random() * DIAGNOSES.length)]!;
+    const forceDangerous = Math.random() < 0.1;
+    const preset = pickRandomPreset(forceDangerous);
+
+    const diagnosisPool = preset.diagnosisPool;
+    const diagnosis = diagnosisPool.length > 0
+      ? diagnosisPool[Math.floor(Math.random() * diagnosisPool.length)]!
+      : DIAGNOSES[Math.floor(Math.random() * DIAGNOSES.length)]!;
+
     const patient: Patient = {
       id,
       state: "entering",
-      health: 0.3 + Math.random() * 0.4, // 0.3–0.7
-      patience: 0.8 + Math.random() * 0.2, // 0.8–1.0
-      dangerous,
+      health: 0.3 + Math.random() * 0.4,
+      patience: preset.personality.patience * (0.85 + Math.random() * 0.15),
+      dangerous: preset.dangerous,
       diagnosis,
       assignedRoom: null,
       assignedDoctor: null,
       mesh: null,
+      presetId: preset.presetId,
+      displayName: preset.name,
     };
     this.patients.push(patient);
     return patient;

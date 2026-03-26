@@ -10,6 +10,7 @@ export interface DialogueOverlayConfig {
   npcName: string;
   npcRole: string;
   portraitColor?: string;
+  portraitInitial?: string;
   initialText: string;
   actions: DialogueAction[];
   onAction: (actionKey: string) => void;
@@ -21,6 +22,7 @@ export interface DialogueOverlayMount {
   appendNpcText(text: string): void;
   appendPlayerText(text: string): void;
   setThinking(thinking: boolean): void;
+  setPortraitUrl(url: string): void;
   teardown(): void;
 }
 
@@ -48,7 +50,7 @@ export function mountDialogueOverlay(cfg: DialogueOverlayConfig): DialogueOverla
   const uiRoot = getUiRoot();
 
   const portraitBg = cfg.portraitColor ?? roleColorFor(cfg.npcRole);
-  const initial = ROLE_INITIALS[cfg.npcRole] ?? "?";
+  const initial = cfg.portraitInitial ?? ROLE_INITIALS[cfg.npcRole] ?? "?";
 
   const el = document.createElement("div");
   el.className = "hh_dlg_overlay";
@@ -62,7 +64,7 @@ export function mountDialogueOverlay(cfg: DialogueOverlayConfig): DialogueOverla
       </div>
 
       <div class="hh_dlg_portrait_area">
-        <div class="hh_dlg_portrait" style="background:${portraitBg};">
+        <div class="hh_dlg_portrait" data-dlg-portrait style="background:${portraitBg};">
           <span class="hh_dlg_portrait_initial">${initial}</span>
         </div>
         <div class="hh_dlg_npc_name">${escHtml(cfg.npcName)}</div>
@@ -170,6 +172,8 @@ export function mountDialogueOverlay(cfg: DialogueOverlayConfig): DialogueOverla
   el.addEventListener("pointermove", (e) => e.stopPropagation(), { capture: true });
   el.addEventListener("pointerup", (e) => e.stopPropagation(), { capture: true });
 
+  const portraitEl = el.querySelector<HTMLElement>("[data-dlg-portrait]")!;
+
   // Focus the input after a short delay so mobile keyboard doesn't jump
   setTimeout(() => inputEl.focus(), 100);
 
@@ -185,6 +189,10 @@ export function mountDialogueOverlay(cfg: DialogueOverlayConfig): DialogueOverla
       if (thinking) {
         historyEl.scrollTop = historyEl.scrollHeight;
       }
+    },
+    setPortraitUrl(url: string) {
+      portraitEl.style.background = "none";
+      portraitEl.innerHTML = `<img src="${escHtml(url)}" class="hh_dlg_portrait_img" alt="portrait" />`;
     },
     teardown() {
       el.remove();

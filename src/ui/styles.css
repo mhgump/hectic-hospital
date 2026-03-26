@@ -358,6 +358,19 @@ body {
   user-select: none;
 }
 
+.hh_dlg_portrait_img {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+  animation: hh_dlg_portraitReveal 0.4s ease-out;
+}
+
+@keyframes hh_dlg_portraitReveal {
+  from { opacity: 0; transform: scale(0.85); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
 .hh_dlg_npc_name {
   margin-top: 8px;
   font-size: 16px;

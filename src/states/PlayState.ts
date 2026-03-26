@@ -26,8 +26,6 @@ import { mountDialogueOverlay } from "../ui/dialogueOverlay";
 import type { DialogueOverlayMount, DialogueAction } from "../ui/dialogueOverlay";
 import { templateGenerator } from "../game/dialogueGenerator";
 import { NPC_PRESETS } from "../hospital/npcPresets";
-import type { NpcPreset } from "../hospital/npcPresets";
-import { requestPortrait, getCachedPortrait } from "../game/scenarioPortraits";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Stub interfaces for P2 and P3 systems (replace with real imports once ready)
@@ -277,11 +275,6 @@ export class PlayState implements GameState {
     // ─── Spawn initial staff (stub NPCs) ─────────────────────────────────
     this.spawnStubStaff(ctx, scene, shadowGenerator);
 
-    // ─── Pre-warm AI portraits for all NPC presets ───────────────────────
-    for (const preset of NPC_PRESETS) {
-      requestPortrait(preset.presetId, preset.appearance.promptDescription);
-    }
-
     // ─── Main game loop ──────────────────────────────────────────────────
     scene.onBeforeRenderObservable.add(() => {
       const dt = scene.getEngine().getDeltaTime() / 1000;
@@ -456,9 +449,7 @@ export class PlayState implements GameState {
         // Update patient name tag based on state
         const tag = this.nameTags.get(p.id);
         if (tag) {
-          if (p.dangerous) {
-            tag.update("DANGEROUS", "#D93636");
-          } else if (p.patience < 0.3) {
+          if (p.patience < 0.3) {
             tag.update("ANGRY", "#D93636");
           } else if (p.state === "in_treatment") {
             tag.update("TREATING", "#4A7FDB");
@@ -596,9 +587,7 @@ export class PlayState implements GameState {
     box.parent = root;
     box.position.y = 0.75;
     const mat = new StandardMaterial(`${patient.id}_mat`, scene);
-    mat.diffuseColor = patient.dangerous
-      ? new Color3(0.9, 0.2, 0.2)
-      : new Color3(0.7, 0.85, 0.7);
+    mat.diffuseColor = new Color3(0.7, 0.85, 0.7);
     box.material = mat;
     sg.addShadowCaster(box);
 
@@ -619,10 +608,8 @@ export class PlayState implements GameState {
 
     this.npcAgents.push(agent);
 
-    const role = patient.dangerous ? "dangerous" : "patient";
     const shortName = patient.displayName?.split(" ")[0] ?? "PATIENT";
-    const label = patient.dangerous ? `${shortName} ⚠` : shortName;
-    const tag = createNameTag(scene, root, label, role);
+    const tag = createNameTag(scene, root, shortName, "patient");
     this.nameTags.set(patient.id, tag);
   }
 
@@ -1131,16 +1118,14 @@ export class PlayState implements GameState {
 
     const npcName = patient.displayName
       ?? patient.id.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
-    const npcRole = patient.dangerous ? "dangerous" : "patient";
+    const npcRole = "patient";
     const greeting = templateGenerator.generateGreeting(patient);
 
     const actions: DialogueAction[] = [
       { label: "Accept", key: "accept", color: "rgba(40, 167, 69, 0.85)" },
       { label: "Reject", key: "reject", color: "rgba(180, 80, 20, 0.85)" },
     ];
-    if (patient.dangerous || Math.random() < 0.3) {
-      actions.push({ label: "Call Police", key: "call_police", color: "rgba(200, 40, 40, 0.85)" });
-    }
+    actions.push({ label: "Call Police", key: "call_police", color: "rgba(200, 40, 40, 0.85)" });
 
     this.dialogueOverlay = mountDialogueOverlay({
       npcName,
@@ -1167,18 +1152,8 @@ export class PlayState implements GameState {
       },
     });
 
-    // Trigger portrait generation via Scenario API
-    if (preset) {
-      const cached = getCachedPortrait(preset.presetId);
-      if (cached) {
-        this.dialogueOverlay.setPortraitUrl(cached);
-      } else {
-        requestPortrait(preset.presetId, preset.appearance.promptDescription).then((url) => {
-          if (url && this.dialogueOverlay) {
-            this.dialogueOverlay.setPortraitUrl(url);
-          }
-        });
-      }
+    if (preset?.appearance.portraitPath) {
+      this.dialogueOverlay.setPortraitUrl(preset.appearance.portraitPath);
     }
   }
 
