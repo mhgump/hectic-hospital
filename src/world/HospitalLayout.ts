@@ -75,12 +75,15 @@ const TILE   = 2.5;
 const RECEPTION_D = 10;
 const GRID_D      = 7;
 
+// Reception spans the full hospital width so its exterior side walls (negX/posX)
+// align with the grid's exterior side walls (x = ±(7 + ROOM_W/2) = ±12).
+const RECEPTION_W = 2 * (7 + ROOM_W / 2); // = 24
+
 // ── Hardcoded hospital layout ─────────────────────────────────────────────────
 //
-//  Z =-15  ┌──────────────────────┐  ← north / entrance face
-//          │   RECEPTION  10×10   │  center (0, 0, -10)
-//  Z = -5  └──────────┬───────────┘
-//                     │  N-S corridor (4 wide)
+//  Z =-13  ┌──────────────────────────────────────────────┐  ← north/entrance face
+//          │        RECEPTION  24×10  (spans full width)   │  center (0, 0, -8)
+//  Z = -3  └──────────┬───────────────────────────────────┘
 //  Z = -3  ┌──────────┼────────────┐
 //          │ waiting  │ p_room_1   │  grid top row 10×7, centers (±7, 0, +0.5)
 //  Z = +4  └──────────┼────────────┘
@@ -104,6 +107,8 @@ interface RoomSpec {
   pos: Vector3;
   entryPoint: Vector3;
   roomD: number;
+  /** Override width (defaults to ROOM_W). */
+  roomW?: number;
   layoutName: string;
   extWalls: WallSide[];
   /** negZ wall has a door opening (reception public entrance). */
@@ -113,9 +118,10 @@ interface RoomSpec {
 const ROOM_SPECS: RoomSpec[] = [
   {
     id: "reception",
-    pos: new Vector3(0, 0, -10),
-    entryPoint: new Vector3(0, 0, -10),
+    pos: new Vector3(0, 0, -8),
+    entryPoint: new Vector3(0, 0, -8),
     roomD: RECEPTION_D,
+    roomW: RECEPTION_W,
     layoutName: "Reception",
     extWalls: ["negZ", "negX", "posX"],
     isEntrance: true,
@@ -219,7 +225,7 @@ export function buildHospitalGeometry(
     const layout = byName.get(spec.layoutName) ?? null;
     const ox  = spec.pos.x;
     const oz  = spec.pos.z;
-    const w   = ROOM_W;
+    const w   = spec.roomW ?? ROOM_W;
     const d   = spec.roomD;
     const pfx = spec.id;
     const ext = new Set(spec.extWalls);

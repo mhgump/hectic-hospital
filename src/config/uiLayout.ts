@@ -3,7 +3,7 @@ export const UiLayout = {
   designHeight: 720,
   baseUiScale: 1,
   maxShellScale: 2.5,
-  maxRenderScale: 3,
+  maxRenderScale: 1,
 };
 
 export function getShellScale(viewportWidth: number, viewportHeight: number): number {

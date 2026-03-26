@@ -8,7 +8,7 @@ export type EngineWithCanvas = {
 
 export function createEngine(canvas: HTMLCanvasElement): EngineWithCanvas {
   // Antialias true gives nicer defaults; can be tuned later via debug sliders.
-  const engine = new Engine(canvas, true, {
+  const engine = new Engine(canvas, false, {
     preserveDrawingBuffer: false,
     stencil: true,
     disableWebGL2Support: false,

@@ -62,7 +62,13 @@ export class AudioManager {
 
     const chosenPath = pickSupportedAudioPath(entry.mp3Path, entry.oggPath);
     const url = resolvePublicAssetUrl(chosenPath);
-    const buffer = await this.getOrLoadBuffer(url);
+    let buffer: AudioBuffer;
+    try {
+      buffer = await this.getOrLoadBuffer(url);
+    } catch (err) {
+      console.warn(`[AudioManager] playSfx failed for ${assetId}:`, err);
+      return;
+    }
 
     const src = this.ctx.createBufferSource();
     src.buffer = buffer;
@@ -82,7 +88,13 @@ export class AudioManager {
 
     const chosenPath = pickSupportedAudioPath(entry.mp3Path, entry.oggPath);
     const url = resolvePublicAssetUrl(chosenPath);
-    const buffer = await this.getOrLoadBuffer(url);
+    let buffer: AudioBuffer;
+    try {
+      buffer = await this.getOrLoadBuffer(url);
+    } catch (err) {
+      console.warn(`[AudioManager] playBgm failed for ${assetId}:`, err);
+      return;
+    }
 
     this.bgmGain = this.ctx.createGain();
     this.bgmGain.gain.value = volume;
@@ -118,7 +130,9 @@ export class AudioManager {
       throw new Error(`Failed to fetch audio: ${url} (${res.status})`);
     }
     const data = await res.arrayBuffer();
-    const buffer = await this.ctx.decodeAudioData(data);
+    const buffer = await new Promise<AudioBuffer>((resolve, reject) =>
+      this.ctx!.decodeAudioData(data, resolve, reject),
+    );
     this.buffers.set(url, buffer);
     return buffer;
   }

@@ -170,7 +170,7 @@ export class PlayState implements GameState {
     sunLight.position = new Vector3(10, 20, 10);
 
     const shadowGenerator = new ShadowGenerator(512, sunLight);
-    shadowGenerator.useExponentialShadowMap = true;
+    shadowGenerator.usePoissonSampling = true;
     shadowGenerator.darkness = 0.3;
     (scene as any)._shadowGenerator = shadowGenerator;
 
@@ -520,7 +520,7 @@ export class PlayState implements GameState {
 
   private spawnStubStaff(ctx: StateContext, scene: Scene, sg: ShadowGenerator) {
     const roles: Array<{ role: Staff["role"]; color: Color3; pos: Vector3; mass: number }> = [
-      { role: "receptionist", color: new Color3(0.9, 0.7, 0.2), pos: new Vector3(0, 0, -12), mass: Tuning.defaultMass },
+      { role: "receptionist", color: new Color3(0.9, 0.7, 0.2), pos: new Vector3(0, 0, -11), mass: Tuning.defaultMass },
       { role: "nurse", color: new Color3(1, 1, 1), pos: new Vector3(-1, 0, 2), mass: Tuning.defaultMass },
       { role: "nurse", color: new Color3(1, 1, 1), pos: new Vector3(1, 0, 2), mass: Tuning.defaultMass },
       { role: "doctor", color: new Color3(0.3, 0.5, 0.9), pos: new Vector3(-7, 0, 10.5), mass: Tuning.defaultMass },
@@ -532,7 +532,7 @@ export class PlayState implements GameState {
       const id = `${def.role}_${staffIdx++}`;
       const root = new TransformNode(id, scene);
       root.position.copyFrom(def.pos);
-      if (def.role === "receptionist") root.rotation.y = Math.PI;
+      if (def.role === "receptionist") root.rotation.y = 0;
 
       const nurseContainers = this.characterContainers?.nurses ?? [];
       const doctorContainers = this.characterContainers?.doctors ?? [];

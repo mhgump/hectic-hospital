@@ -10,13 +10,13 @@ export class ErrorOverlay {
 
     window.addEventListener("error", (ev) => {
       const msg = ev.error instanceof Error ? ev.error.stack ?? ev.error.message : String(ev.message);
-      this.show(`Error: ${msg}`);
+      console.error(`Error: ${msg}`);
     });
 
     window.addEventListener("unhandledrejection", (ev) => {
       const r = (ev as PromiseRejectionEvent).reason;
       const msg = r instanceof Error ? r.stack ?? r.message : String(r);
-      this.show(`Unhandled rejection: ${msg}`);
+      console.error(`Unhandled rejection: ${msg}`);
     });
   }
 

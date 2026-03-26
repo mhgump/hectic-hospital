@@ -6,10 +6,9 @@
  *
  * Coordinate reference (from HospitalLayout.ts):
  *
- *   Z=-15  ┌──────────────────────┐
- *          │   RECEPTION  10×10   │  center (0, 0, -10)
- *   Z=-5   └──────────┬───────────┘
- *                      │  N-S hallway (X: -2 to +2)
+ *   Z=-13  ┌──────────────────────────────────┐
+ *          │   RECEPTION  24×10               │  center (0, 0, -8)
+ *   Z=-3   └──────────┬───────────────────────┘
  *   Z=-3   ┌──────────┼───────────┐
  *          │ waiting   │ p_room_1  │  centers (±7, 0, +0.5)
  *   Z=+4   └──────────┼───────────┘
@@ -18,7 +17,7 @@
  *          │ p_room_2  │ dr_office │  centers (±7, 0, +10.5)
  *   Z=+14  └──────────┴───────────┘
  *
- * Room dimensions: ROOM_W=10, GRID_D=7, RECEPTION_D=10, WALL_T=0.15
+ * Room dimensions: RECEPTION_W=24, ROOM_W=10, GRID_D=7, RECEPTION_D=10, WALL_T=0.15
  * Doorways: 1.5 unit gap centered in each wall.
  */
 
@@ -29,7 +28,7 @@ export const HOSPITAL_WAYPOINTS: Waypoint[] = [
   // ── Room centers (final destinations) ──────────────────────────────────────
 
   { id: "reception_center",
-    position: new Vector3(0, 0, -10),
+    position: new Vector3(0, 0, -8),
     connections: ["reception_door_s"] },
 
   { id: "waiting_center",
@@ -51,9 +50,9 @@ export const HOSPITAL_WAYPOINTS: Waypoint[] = [
   // ── Doorway nodes ──────────────────────────────────────────────────────────
   // Placed just outside the wall on the hallway side so NPCs step through.
 
-  // Reception south wall → N-S corridor  (wall at Z = -10 + 10/2 = -5)
+  // Reception south wall → N-S corridor  (wall at Z = -8 + 10/2 = -3)
   { id: "reception_door_s",
-    position: new Vector3(0, 0, -4.8),
+    position: new Vector3(0, 0, -2.8),
     connections: ["reception_center", "hall_ns_north"] },
 
   // Waiting room east wall → N-S corridor  (wall at X = -7 + 10/2 = -2)
@@ -80,7 +79,7 @@ export const HOSPITAL_WAYPOINTS: Waypoint[] = [
 
   // Top of N-S corridor (just south of reception door)
   { id: "hall_ns_north",
-    position: new Vector3(0, 0, -4),
+    position: new Vector3(0, 0, -2),
     connections: ["reception_door_s", "hall_ns_mid"] },
 
   // Middle of N-S corridor (between top-row rooms)
