@@ -7,7 +7,7 @@ export default defineConfig(({ command }) => ({
   optimizeDeps: {
     // Limit dependency scanning to the game entrypoint.
     // This avoids scanning standalone asset demo files under ASSETS/.
-    entries: ["index.html"],
+    entries: ["index.html", "debug_rooms/index.html"],
   },
 }));
 
