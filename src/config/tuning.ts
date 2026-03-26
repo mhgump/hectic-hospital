@@ -72,6 +72,10 @@ export const Tuning = {
   stunDurationSec: 1.5,
   defaultMass: 1.0,
   heavyMass: 2.5,
+  ragdollThreshold: 8.0,     // force above this triggers ragdoll (higher than knockbackThreshold)
+  ragdollDurationSec: 2.0,   // how long ragdoll state lasts
+  ragdollRecoverSec: 0.5,    // recovering phase (lerp back to standing) duration
+  dragSpringStiffness: 0.15, // tether follow lerp coefficient
 
   // ───────────────────────────────────────────────────────────────────────────
   // Economy
