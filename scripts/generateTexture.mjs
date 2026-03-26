@@ -2,18 +2,20 @@
 /**
  * Texture generation pipeline:
  *   Text prompt → Realistic Textures 3.0 → PNG(s)
+ *   Optionally: --rembg removes background (for decal textures)
  *
  * Usage:
- *   node --env-file=.env scripts/generateTexture.mjs "<prompt>" [output-name] [--count N]
+ *   node --env-file=.env scripts/generateTexture.mjs "<prompt>" [output-name] [--count N] [--rembg]
  *
  * Options:
  *   --count N   Number of texture variants to generate (default: 4)
+ *   --rembg     Remove background from generated images (uses @imgly/background-removal-node)
  *
  * Output: public/assets/textures/<output-name>_1.png, _2.png, ...
- * Tip: add tileable/seamless keywords to your prompt for wall/floor use.
  */
 
 import fs from "node:fs";
+import { readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { post, pollJob, downloadAsset } from "./_scenario.mjs";
@@ -24,11 +26,13 @@ const TEXTURE_LORA = "model_jM6aNXDGR2DyqujYRisjDa6r";
 const OUTPUT_DIR = path.join(PROJECT_DIR, "public/assets/textures");
 
 function parseArgs(argv) {
-  const args = { prompt: null, name: null, count: 4 };
+  const args = { prompt: null, name: null, count: 4, rembg: false };
   const positional = [];
   for (let i = 0; i < argv.length; i++) {
     if (argv[i] === "--count" && argv[i + 1]) {
       args.count = parseInt(argv[++i], 10);
+    } else if (argv[i] === "--rembg") {
+      args.rembg = true;
     } else {
       positional.push(argv[i]);
     }
@@ -37,14 +41,25 @@ function parseArgs(argv) {
   return args;
 }
 
+async function removeBackground(filePath) {
+  // Dynamically import so the package is only loaded when --rembg is used.
+  // Install: npm install @imgly/background-removal-node
+  const { removeBackground: rembg } = await import("@imgly/background-removal-node");
+  process.stdout.write(`    rembg: removing background from ${path.basename(filePath)}...`);
+  // Pass as a file:// URL — the library detects format from URL/extension, not buffer magic bytes
+  const resultBlob = await rembg(new URL(`file://${filePath}`));
+  const arrayBuffer = await resultBlob.arrayBuffer();
+  await writeFile(filePath, Buffer.from(arrayBuffer));
+  process.stdout.write(" done\n");
+}
+
 async function run() {
   const args = parseArgs(process.argv.slice(2));
 
   if (!args.prompt) {
     console.error(
-      'Usage: node --env-file=.env scripts/generateTexture.mjs "<prompt>" [output-name] [--count N]'
+      'Usage: node --env-file=.env scripts/generateTexture.mjs "<prompt>" [output-name] [--count N] [--rembg]'
     );
-    console.error('Example: npm run generateTexture -- "hospital wall, white ceramic tiles, seamless" hospital_wall');
     process.exit(1);
   }
 
@@ -53,6 +68,7 @@ async function run() {
 
   console.log(`Prompt:  "${args.prompt}"`);
   console.log(`Outputs: ${args.count} variant(s) → public/assets/textures/${baseName}_N.png`);
+  if (args.rembg) console.log("Options: background removal enabled (--rembg)");
 
   console.log("\nGenerating textures (Realistic Textures 3.0)...");
   const result = await post(`/generate/custom/${TEXTURE_MODEL}`, {
@@ -80,11 +96,15 @@ async function run() {
     process.stdout.write(`  [${i + 1}/${assetIds.length}] ${path.relative(PROJECT_DIR, outPath)}...`);
     await downloadAsset(assetIds[i], outPath);
     process.stdout.write(" done\n");
+
+    if (args.rembg) {
+      await removeBackground(outPath);
+    }
+
     saved.push(outPath);
   }
 
   console.log(`\nDone. ${saved.length} texture(s) saved to public/assets/textures/`);
-  console.log("Next: register chosen textures in src/assets/assetIds.ts and src/assets/assetRegistry.ts");
 }
 
 run().catch((err) => {

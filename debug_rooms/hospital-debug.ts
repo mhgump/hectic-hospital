@@ -57,6 +57,22 @@ async function main(): Promise<void> {
     onDeleteRoom: async (roomId: string) => {
       return deleteRoom(roomId);
     },
+    onRegenerateLayout: async (roomId: string) => {
+      try {
+        const res = await fetch(
+          `${SERVER_URL}/api/rooms/${encodeURIComponent(roomId)}/regenerate-layout`,
+          { method: "POST", signal: AbortSignal.timeout(60_000) }
+        );
+        if (res.ok) {
+          const data = (await res.json()) as ServerStatusResponse;
+          ui.applyServerResponse(data);
+          const current = data.rooms.find((r) => r.id === roomId);
+          if (current) {
+            await renderer.loadRoom(current, data.hallwayTexture, data.hallwayFloorTexture);
+          }
+        }
+      } catch { /* server may be offline */ }
+    },
     onRegenerateAsset: async (key: string) => {
       try {
         await fetch(`${SERVER_URL}/api/regenerate/${encodeURIComponent(key)}`, {

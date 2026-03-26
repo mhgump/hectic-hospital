@@ -34,6 +34,7 @@ export class HospitalUI {
   private onRoomSelect: (room: HospitalRoom) => void;
   private onNewRoom: (name: string, prompt: string) => Promise<HospitalRoom | null>;
   private onDeleteRoom: (roomId: string) => Promise<boolean>;
+  private onRegenerateLayout: (roomId: string) => Promise<void>;
   private onRegenerateAsset: (key: string) => Promise<void>;
 
   constructor(
@@ -43,6 +44,7 @@ export class HospitalUI {
       onRoomSelect: (room: HospitalRoom) => void;
       onNewRoom: (name: string, prompt: string) => Promise<HospitalRoom | null>;
       onDeleteRoom: (roomId: string) => Promise<boolean>;
+      onRegenerateLayout: (roomId: string) => Promise<void>;
       onRegenerateAsset: (key: string) => Promise<void>;
     }
   ) {
@@ -51,6 +53,7 @@ export class HospitalUI {
     this.onRoomSelect = callbacks.onRoomSelect;
     this.onNewRoom = callbacks.onNewRoom;
     this.onDeleteRoom = callbacks.onDeleteRoom;
+    this.onRegenerateLayout = callbacks.onRegenerateLayout;
     this.onRegenerateAsset = callbacks.onRegenerateAsset;
   }
 
@@ -142,6 +145,19 @@ export class HospitalUI {
     const newBtn = this.btn("New", "primary");
     newBtn.addEventListener("click", () => this.showNewRoomModal());
     controls.appendChild(newBtn);
+
+    const regenBtn = this.btn("Regenerate");
+    regenBtn.title = "Ask Claude to regenerate this room's layout from scratch";
+    regenBtn.addEventListener("click", async () => {
+      if (!this.selectedRoom) return;
+      if (!confirm(`Regenerate layout for "${this.selectedRoom.name}"?\n\nThis will delete all current assets and generate a new layout using Claude.`)) return;
+      regenBtn.disabled = true;
+      regenBtn.textContent = "Asking Claude…";
+      await this.onRegenerateLayout(this.selectedRoom.id);
+      regenBtn.textContent = "Regenerate";
+      regenBtn.disabled = false;
+    });
+    controls.appendChild(regenBtn);
 
     const delBtn = this.btn("Delete", "danger");
     delBtn.title = "Delete current room and all its generated assets";

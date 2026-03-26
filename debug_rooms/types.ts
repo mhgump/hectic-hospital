@@ -1,7 +1,7 @@
 /** A distinct model definition — one GLB is generated per unique id. */
 export interface RoomModelDef {
   id: string;           // snake_case, unique within the room
-  prompt: string;       // generation prompt
+  prompt: string;       // generation prompt (empty if existingModel is set)
   model: string | null; // path relative to public/ once generated
   collides: boolean;    // whether this model blocks player movement
 }
@@ -23,6 +23,12 @@ export interface RoomTexturePlacement {
   uvScale: [number, number];  // [s, s] uniform size fraction (use same value for both)
 }
 
+/** An empty tile adjacent to an interactive model where an NPC will stand. */
+export interface RoomInteractionTile {
+  forModelId: string;                 // the model this interaction tile belongs to
+  position: [number, number, number]; // [x, y, z] tile center — y always 0
+}
+
 export interface HospitalRoom {
   id: string;
   name: string;
@@ -34,10 +40,12 @@ export interface HospitalRoom {
   // Interior walls — single shared tileable texture for both north and west walls
   wallTexturePrompt: string;
   wallTexture: string | null;
-  // Distinct model definitions (≤ 4); each generates one GLB reused across all placements
+  // Distinct model definitions (≤ 5); each generates one GLB reused across all placements
   models: RoomModelDef[];
   // All object placements — many placements may share one modelId
   placements: RoomObjectPlacement[];
+  // Empty tiles adjacent to interactive models (for NPC standing positions)
+  interactionTiles?: RoomInteractionTile[];
   // Decorative texture placements on walls / floor
   extraTextures: RoomTexturePlacement[];
 }

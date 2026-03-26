@@ -10,32 +10,31 @@ import { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial";
 import { Texture } from "@babylonjs/core/Materials/Textures/texture";
 import { DynamicTexture } from "@babylonjs/core/Materials/Textures/dynamicTexture";
 import { SceneLoader } from "@babylonjs/core/Loading/sceneLoader";
-import { HavokPlugin } from "@babylonjs/core/Physics/v2/Plugins/havokPlugin";
-import { PhysicsAggregate } from "@babylonjs/core/Physics/v2/physicsAggregate";
-import { PhysicsShapeType } from "@babylonjs/core/Physics/v2/IPhysicsEnginePlugin";
-import HavokPhysics from "@babylonjs/havok";
 import type { AbstractMesh } from "@babylonjs/core/Meshes/abstractMesh";
 import type { Material } from "@babylonjs/core/Materials/material";
 import type { BaseTexture } from "@babylonjs/core/Materials/Textures/baseTexture";
 import type { HospitalRoom, RoomTexturePlacement, RoomModelDef, RoomObjectPlacement } from "./types";
 
-const ROOM_W = 10;
-const ROOM_D = 10;
+// Room is a 7×7 tile grid. 1 tile = 1 world unit ≈ one human character width.
+const ROOM_W = 7;
+const ROOM_D = 7;
 const ROOM_H = 3;
 const WALL_T = 0.15;
-const DOOR_W = 1.5;
+const DOOR_W = 1.0;  // 1 tile = center tile (1/7th of room width)
 const DOOR_H = 2.2;
-const TILE = 2.5; // world units per texture repeat
-const HALLWAY_DEPTH = 4; // corridor floor strip depth beyond south wall
+const TILE = 1.5;    // world units per texture repeat
+const HALLWAY_DEPTH = 3; // corridor floor strip depth beyond south wall
+
+// N/S walls extend by WALL_T on each side to fill the corner gaps left by E/W walls.
+// This makes the room a complete square with no exposed corners.
+const XWALL_W = ROOM_W + 2 * WALL_T;
 
 // Fixed camera angle — slightly east of due south, looking mostly north.
-// Shows: north wall interior (dominant) and west wall interior at an angle.
-const CAM_ALPHA = -Math.PI * 5 / 12; // ~-75° — mostly south, slight east offset
-const CAM_BETA  = Math.PI / 4;        // 45° from top — classic isometric top-down angle
-const CAM_RADIUS = 20;
-const CAM_TARGET = new Vector3(0, 1.2, 0.5);
+const CAM_ALPHA = -Math.PI * 5 / 12;
+const CAM_BETA  = Math.PI / 4;
+const CAM_RADIUS = 15;
+const CAM_TARGET = new Vector3(0, 1.0, 0.5);
 
-// Pan direction vectors derived from alpha (forward = toward camera's look direction in XZ)
 const PAN_FWD   = new Vector3(-Math.cos(CAM_ALPHA), 0, -Math.sin(CAM_ALPHA)).normalize();
 const PAN_RIGHT = new Vector3(-Math.sin(CAM_ALPHA), 0,  Math.cos(CAM_ALPHA)).normalize();
 const PAN_STEP  = 0.5;
@@ -43,11 +42,6 @@ const PAN_STEP  = 0.5;
 export class HospitalRoomRenderer {
   private scene: Scene;
   private camera!: ArcRotateCamera;
-  private nurseMesh: AbstractMesh | null = null;
-  private nurseAggregate: PhysicsAggregate | null = null;
-  private floorAggregates: PhysicsAggregate[] = [];
-  private nurseVelocityInterval: ReturnType<typeof setInterval> | null = null;
-  private physicsReady: Promise<void>;
   private roomMeshes: AbstractMesh[] = [];
   private roomMaterials: Material[] = [];
   private roomTextures: BaseTexture[] = [];
@@ -57,7 +51,6 @@ export class HospitalRoomRenderer {
   constructor(engine: Engine, canvas: HTMLCanvasElement) {
     this.scene = this.buildScene(engine, canvas);
     this.setupKeyboardPan();
-    this.physicsReady = this.initPhysics();
   }
 
   // ── Public API ─────────────────────────────────────────────────────────────
@@ -66,14 +59,12 @@ export class HospitalRoomRenderer {
     this.clearRoom();
     this.buildFloor(room.floorTexture);
     this.buildHallwayFloor(hallwayFloorTexture);
-    // North and west walls share the same base tileable texture
     this.buildNorthWall(room.wallTexture);
     this.buildSouthWall(hallwayTexture);
     this.buildWestWall(room.wallTexture);
     this.buildEastWall(room.wallTexture);
     this.buildExtraTextures(room.extraTextures);
     await this.loadModelsAndPlacements(room);
-    await this.loadHallwayNurse();
     this.lastDataKey = this.dataKey(room, hallwayTexture, hallwayFloorTexture);
   }
 
@@ -96,7 +87,6 @@ export class HospitalRoomRenderer {
 
   private setupKeyboardPan(): void {
     this.keydownHandler = (e: KeyboardEvent) => {
-      // Don't pan when typing into inputs
       if ((e.target as HTMLElement).tagName === "INPUT" || (e.target as HTMLElement).tagName === "TEXTAREA") return;
 
       let fwd = 0, right = 0;
@@ -115,39 +105,28 @@ export class HospitalRoomRenderer {
     window.addEventListener("keydown", this.keydownHandler);
   }
 
-  // ── Physics (Havok) ────────────────────────────────────────────────────────
-
-  private async initPhysics(): Promise<void> {
-    const havok = await HavokPhysics();
-    const hk = new HavokPlugin(true, havok);
-    this.scene.enablePhysics(new Vector3(0, -9.81, 0), hk);
-  }
-
   // ── Scene setup ────────────────────────────────────────────────────────────
 
   private buildScene(engine: Engine, canvas: HTMLCanvasElement): Scene {
     const scene = new Scene(engine);
     scene.clearColor = new Color4(0.1, 0.1, 0.13, 1);
 
-    // Fixed angle perspective: SE outside looking NW; WASD pans the target
     this.camera = new ArcRotateCamera("cam", CAM_ALPHA, CAM_BETA, CAM_RADIUS, CAM_TARGET.clone(), scene);
     const camera = this.camera;
     camera.lowerAlphaLimit = CAM_ALPHA;
     camera.upperAlphaLimit = CAM_ALPHA;
     camera.lowerBetaLimit  = CAM_BETA;
     camera.upperBetaLimit  = CAM_BETA;
-    camera.lowerRadiusLimit = 8;
-    camera.upperRadiusLimit = 35;
+    camera.lowerRadiusLimit = 6;
+    camera.upperRadiusLimit = 28;
     camera.wheelPrecision = 5;
-    camera.attachControl(canvas, true); // scroll-to-zoom still works
+    camera.attachControl(canvas, true);
 
     const hemi = new HemisphericLight("hemi", new Vector3(0, 1, 0), scene);
     hemi.intensity = 0.5;
     hemi.diffuse = new Color3(1, 1, 1);
     hemi.groundColor = new Color3(0.35, 0.35, 0.4);
 
-    // Directional light from the camera side (mostly south, slight east + above)
-    // negative X and positive Z → lights north wall interior and west wall interior
     const dir = new DirectionalLight("dir", new Vector3(-0.2, -1, 0.7), scene);
     dir.intensity = 0.9;
     dir.diffuse = new Color3(1, 0.97, 0.93);
@@ -160,23 +139,24 @@ export class HospitalRoomRenderer {
   private buildFloor(texturePath: string | null): void {
     const mesh = MeshBuilder.CreateBox("floor", { width: ROOM_W, height: 0.04, depth: ROOM_D }, this.scene);
     mesh.position.y = -0.02;
-    // Swap u/v order: for Babylon Box top face U maps to depth (Z), V maps to width (X)
     mesh.material = this.makeMat("floor", texturePath, ROOM_D / TILE, ROOM_W / TILE, () => this.phFloor());
     this.roomMeshes.push(mesh);
   }
 
-  /** Corridor floor strip visible outside the south wall door opening. */
   private buildHallwayFloor(texturePath: string | null): void {
     const zStart = -(ROOM_D / 2 + WALL_T);
     const zCenter = zStart - HALLWAY_DEPTH / 2;
-    const mesh = MeshBuilder.CreateBox("hallway_floor", { width: ROOM_W, height: 0.04, depth: HALLWAY_DEPTH }, this.scene);
+    const mesh = MeshBuilder.CreateBox("hallway_floor", { width: XWALL_W, height: 0.04, depth: HALLWAY_DEPTH }, this.scene);
     mesh.position.set(0, -0.02, zCenter);
-    // Swap u/v order: for Babylon Box top face U maps to depth (Z), V maps to width (X)
-    mesh.material = this.makeMat("hallway_floor", texturePath, HALLWAY_DEPTH / TILE, ROOM_W / TILE, () => this.phHallway());
+    mesh.material = this.makeMat("hallway_floor", texturePath, HALLWAY_DEPTH / TILE, XWALL_W / TILE, () => this.phHallway());
     this.roomMeshes.push(mesh);
   }
 
   // ── Walls ──────────────────────────────────────────────────────────────────
+  //
+  // N/S walls (buildXWall) use XWALL_W = ROOM_W + 2*WALL_T so they extend into
+  // the corner space occupied by the E/W wall thickness, forming a complete square.
+  // E/W walls (buildZWall) use ROOM_D and sit flush between the N/S walls.
 
   private buildNorthWall(texturePath: string | null): void {
     this.buildXWall("north", ROOM_D / 2 + WALL_T / 2, texturePath, () => this.phNorthWall());
@@ -194,9 +174,10 @@ export class HospitalRoomRenderer {
     this.buildZWall("east", ROOM_W / 2 + WALL_T / 2, texturePath, () => this.phWestWall());
   }
 
-  /** X-axis wall (north or south) with door cutout centred at X=0. */
+  /** X-axis wall (north or south) with door cutout centred at X=0.
+   *  Uses XWALL_W so it extends into corner space left by E/W walls. */
   private buildXWall(name: string, zPos: number, texturePath: string | null, ph: () => DynamicTexture): void {
-    const half  = ROOM_W / 2;
+    const half  = XWALL_W / 2;
     const halfD = DOOR_W / 2;
     const sideW = half - halfD;
     const sideCX = halfD + sideW / 2;
@@ -221,7 +202,8 @@ export class HospitalRoomRenderer {
     this.roomMeshes.push(header);
   }
 
-  /** Z-axis wall (west or east) with door cutout centred at Z=0. */
+  /** Z-axis wall (west or east) with door cutout centred at Z=0.
+   *  Uses ROOM_D — corners are already covered by the extended N/S walls. */
   private buildZWall(name: string, xPos: number, texturePath: string | null, ph: () => DynamicTexture): void {
     const half  = ROOM_D / 2;
     const halfD = DOOR_W / 2;
@@ -254,7 +236,6 @@ export class HospitalRoomRenderer {
     for (const p of placements) {
       if (!p.texture) continue;
       const [uo, vo] = p.uvOffset;
-      // Use uniform scale: uvScale[0] as fraction of the shorter surface dimension → square placement
       const us = p.uvScale[0];
       let mesh: AbstractMesh;
 
@@ -262,7 +243,6 @@ export class HospitalRoomRenderer {
         case "floor": {
           const sz = us * Math.min(ROOM_W, ROOM_D);
           mesh = MeshBuilder.CreatePlane(`ex_${p.id}`, { width: sz, height: sz }, this.scene);
-          // uvOffset = center position (0-1 on each axis)
           mesh.position.set(-ROOM_W / 2 + uo * ROOM_W, 0.02, -ROOM_D / 2 + vo * ROOM_D);
           mesh.rotation.x = Math.PI / 2;
           break;
@@ -312,7 +292,6 @@ export class HospitalRoomRenderer {
   // ── Model + placement loading ───────────────────────────────────────────────
 
   private async loadModelsAndPlacements(room: HospitalRoom): Promise<void> {
-    // Index placements by modelId
     const byModel = new Map<string, RoomObjectPlacement[]>();
     for (const p of (room.placements ?? [])) {
       const arr = byModel.get(p.modelId) ?? [];
@@ -353,95 +332,9 @@ export class HospitalRoomRenderer {
     }
   }
 
-  /** Loads the rigged nurse GLB, places her in the hallway, and makes her a ragdoll. */
-  private async loadHallwayNurse(): Promise<void> {
-    if (this.nurseVelocityInterval !== null) {
-      clearInterval(this.nurseVelocityInterval);
-      this.nurseVelocityInterval = null;
-    }
-    this.nurseMesh = null;
-    if (this.nurseAggregate) {
-      this.nurseAggregate.dispose();
-      this.nurseAggregate = null;
-    }
-
-    try {
-      const [, result] = await Promise.all([
-        this.physicsReady,
-        SceneLoader.ImportMeshAsync("", "/assets/models/", "nurse_rigged.glb", this.scene),
-      ]);
-      if (!result.meshes.length) return;
-
-      const root = result.meshes[0]!;
-
-      // Force world matrices so bounding boxes are in world space
-      for (const m of result.meshes) m.computeWorldMatrix(true);
-
-      // Compute the combined bounding box across all meshes with geometry
-      let minY = Infinity, maxY = -Infinity;
-      let minX = Infinity, maxX = -Infinity;
-      let minZ = Infinity, maxZ = -Infinity;
-      for (const m of result.meshes) {
-        if (m.getTotalVertices() === 0) continue;
-        const { minimumWorld, maximumWorld } = m.getBoundingInfo().boundingBox;
-        minY = Math.min(minY, minimumWorld.y); maxY = Math.max(maxY, maximumWorld.y);
-        minX = Math.min(minX, minimumWorld.x); maxX = Math.max(maxX, maximumWorld.x);
-        minZ = Math.min(minZ, minimumWorld.z); maxZ = Math.max(maxZ, maximumWorld.z);
-      }
-
-      // Scale to ~4.25 units tall (2.5× the baseline 1.7)
-      const height = maxY - minY;
-      const scale = height > 0.01 ? 4.25 / height : 1;
-      root.scaling.setAll(scale);
-
-      // Lift feet to y=0; XZ: place at hallway centre (no offX/offZ — model origin should be centred)
-      const liftY = -minY * scale;
-      // Hallway floor runs from z=-(ROOM_D/2+WALL_T) outward by HALLWAY_DEPTH; place at its centre
-      const hallwayZ = -(ROOM_D / 2 + WALL_T + HALLWAY_DEPTH / 2);
-      root.position.set(0, liftY, hallwayZ);
-      root.rotation.y = Math.PI; // facing into the room (north)
-
-      // Recompute after transform changes so the physics body initialises at the right position
-      for (const m of result.meshes) m.computeWorldMatrix(true);
-
-      for (const m of result.meshes) this.roomMeshes.push(m);
-      this.nurseMesh = root;
-
-      // Static physics floor so the nurse stands on it instead of falling through
-      const hallwayFloorMesh = this.scene.getMeshByName("hallway_floor");
-      if (hallwayFloorMesh) {
-        this.floorAggregates.push(
-          new PhysicsAggregate(hallwayFloorMesh, PhysicsShapeType.BOX, { mass: 0 }, this.scene),
-        );
-      }
-
-      // Ragdoll: physics aggregate on the root mesh (box shape, human mass)
-      this.nurseAggregate = new PhysicsAggregate(
-        root,
-        PhysicsShapeType.BOX,
-        { mass: 60, restitution: 0.05, friction: 0.5 },
-        this.scene,
-      );
-
-      // Slide east/west continuously; preserve Y so gravity still applies
-      const SPEED = 2;
-      let dir = 1;
-      this.nurseAggregate.body.setLinearVelocity(new Vector3(SPEED * dir, 0, 0));
-      const agg = this.nurseAggregate;
-      this.nurseVelocityInterval = setInterval(() => {
-        if (!agg.body) return;
-        dir *= -1;
-        const cur = agg.body.getLinearVelocity();
-        agg.body.setLinearVelocity(new Vector3(SPEED * dir, cur.y, 0));
-      }, 1500);
-    } catch {
-      // Nurse GLB not yet generated — silently skip
-    }
-  }
-
   private placeholderObject(id: string, x: number, y: number, z: number): void {
-    const box = MeshBuilder.CreateBox(`obj_${id}`, { size: 0.85 }, this.scene);
-    box.position.set(x, y + 0.425, z);
+    const box = MeshBuilder.CreateBox(`obj_${id}`, { size: 0.9 }, this.scene);
+    box.position.set(x, y + 0.45, z);
     const mat = new StandardMaterial(`obj_${id}_mat`, this.scene);
     mat.diffuseTexture = this.objLabel(id);
     this.roomMaterials.push(mat);
@@ -478,7 +371,6 @@ export class HospitalRoomRenderer {
 
   // ── Procedural placeholder textures ───────────────────────────────────────
 
-  /** Gray hospital floor — linoleum-style checkerboard. */
   private phFloor(): DynamicTexture {
     const size = 256;
     const t = new DynamicTexture("ph_floor", { width: size, height: size }, this.scene, true);
@@ -492,7 +384,6 @@ export class HospitalRoomRenderer {
     t.update(); return t;
   }
 
-  /** North wall — white ceramic tiles with grey grout. */
   private phNorthWall(): DynamicTexture {
     const size = 256;
     const t = new DynamicTexture("ph_north", { width: size, height: size }, this.scene, true);
@@ -507,27 +398,22 @@ export class HospitalRoomRenderer {
     t.update(); return t;
   }
 
-  /** West wall — light sage-green painted plaster (distinct from north). */
   private phWestWall(): DynamicTexture {
     const size = 256;
     const t = new DynamicTexture("ph_west", { width: size, height: size }, this.scene, true);
     const ctx = t.getContext() as CanvasRenderingContext2D;
-    // Base: sage green
     ctx.fillStyle = "#c4d0be";
     ctx.fillRect(0, 0, size, size);
-    // Subtle vertical stucco texture lines
     ctx.strokeStyle = "#b8c4b2";
     ctx.lineWidth = 1;
     for (let x = 8; x < size; x += 24) {
       ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x + 4, size); ctx.stroke();
     }
-    // Baseboard hint at bottom
     ctx.fillStyle = "#aabaa4";
     ctx.fillRect(0, size - 20, size, 20);
     t.update(); return t;
   }
 
-  /** South wall (hallway) — beige painted corridor. */
   private phHallway(): DynamicTexture {
     const size = 256;
     const t = new DynamicTexture("ph_hallway", { width: size, height: size }, this.scene, true);
@@ -539,7 +425,6 @@ export class HospitalRoomRenderer {
     t.update(); return t;
   }
 
-  /** Object placeholder — blue box with ID label. */
   private objLabel(id: string): DynamicTexture {
     const size = 256;
     const t = new DynamicTexture(`obj_lbl_${id}`, { width: size, height: size }, this.scene, true);
@@ -563,16 +448,6 @@ export class HospitalRoomRenderer {
   // ── Cleanup ────────────────────────────────────────────────────────────────
 
   private clearRoom(): void {
-    if (this.nurseVelocityInterval !== null) {
-      clearInterval(this.nurseVelocityInterval);
-      this.nurseVelocityInterval = null;
-    }
-    if (this.nurseAggregate) {
-      this.nurseAggregate.dispose();
-      this.nurseAggregate = null;
-    }
-    for (const fa of this.floorAggregates) fa.dispose();
-    this.floorAggregates = [];
     for (const tex of this.roomTextures) tex.dispose();
     const seen = new Set<Material>();
     for (const mat of this.roomMaterials) {
