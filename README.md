@@ -61,6 +61,33 @@ npm --version    # Should show npm 10+ (exact minor may vary)
 ```
 If you see "command not found", restart your terminal or reinstall Node.js.
 
+## Public assets (Git LFS)
+
+The `public/` folder (~350 MB of 3D models, textures, and audio) is **not checked in directly**. It is stored as `public.tar.gz` via [Git LFS](https://git-lfs.com).
+
+### First-time setup (restore public/)
+
+```bash
+# 1. Install Git LFS (once per machine)
+git lfs install
+
+# 2. Pull the LFS object
+git lfs pull
+
+# 3. Extract the archive
+bash scripts/unbundle_public.sh
+```
+
+### Updating the bundle after changing public/
+
+```bash
+bash scripts/bundle_public.sh
+git add public.tar.gz && git commit -m "chore: update public asset bundle"
+git push
+```
+
+---
+
 ## Run locally
 
 Install dependencies once:

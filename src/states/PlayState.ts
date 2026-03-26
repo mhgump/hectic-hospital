@@ -409,10 +409,6 @@ export class PlayState implements GameState {
     return this.scene;
   }
 
-  getPlayerPosition() {
-    return this.player?.getPosition() ?? null;
-  }
-
   // ─────────────────────────────────────────────────────────────────────────
   // NPC spawning (stub visuals — P2 replaces with CharacterFactory)
   // ─────────────────────────────────────────────────────────────────────────

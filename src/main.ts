@@ -129,11 +129,7 @@ if (Runtime.e2e) {
         patientCount: m.getActivePatients().length,
       };
     },
-    getPlayerPos: () => {
-      const p = playState.getPlayerPosition();
-      if (!p) return null;
-      return { x: p.x, y: p.y, z: p.z };
-    },
+    getPlayerPos: () => null,
     getReady: () => document.documentElement.dataset.jkReady ?? null,
   };
 }

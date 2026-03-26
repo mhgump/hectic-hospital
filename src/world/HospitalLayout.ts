@@ -3,11 +3,17 @@
  * (south), with hallways between rows/columns and a central N-S corridor
  * connecting the grid to reception.
  *
- * Reads /data/hospital-rooms.json to apply interior layout data (floor textures,
- * models, decals) when a matching layout name is found. Rooms always render with
- * full 4-wall geometry using the hallway wall texture on all outside faces; the
- * hallway floor texture covers all corridor strips. When a layout is present for
- * a room its interior content (floor, models, extra textures) is rendered inside.
+ * External faces: thick walls (EXT_WALL_T), solid — no door openings except
+ * the reception entrance on the hospital's north face.  The entrance uses a
+ * special hospital-facade texture with a glass-door panel in the opening.
+ * Interior walls remain thin (WALL_T) with door openings to the hallways.
+ *
+ * North/south (X-axis) walls extend by one wall-thickness beyond the east/west
+ * (Z-axis) walls on each side to give gapless, square corners.
+ *
+ * A large grass plane (y=0.005) sits just above the base floor and is visible
+ * everywhere outside the building — room floors and hallway strips cover it
+ * inside the footprint.
  *
  * Layout names matched against JSON: "Reception", "Office", "Beds".
  * If a layout name is not found in the JSON the room still renders (walls only).
@@ -54,52 +60,65 @@ export interface HospitalRoomsJson {
   rooms: HospitalRoomLayoutData[];
 }
 
-// ── Geometry constants (matching debug_rooms/HospitalRoomRenderer.ts) ─────────
+// ── Geometry constants ─────────────────────────────────────────────────────────
 
 const ROOM_W = 10;
 const ROOM_H = 3;
-const WALL_T = 0.15;
+const WALL_T     = 0.15;   // interior wall thickness
+const EXT_WALL_T = 0.45;   // exterior thick wall thickness
 const DOOR_W = 1.5;
 const DOOR_H = 2.2;
 const TILE   = 2.5;
 
 // Reception keeps the full 10×10 footprint.
-// Grid rooms use a 10×7 footprint so all five rooms fit within the default
-// 40×30 hospital floor (Z: -15 to +15).
+// Grid rooms use a 10×7 footprint so all five rooms fit within the default floor.
 const RECEPTION_D = 10;
 const GRID_D      = 7;
 
 // ── Hardcoded hospital layout ─────────────────────────────────────────────────
 //
-//  Z =-15  ┌──────────────────────┐  ← north edge of floor
+//  Z =-15  ┌──────────────────────┐  ← north / entrance face
 //          │   RECEPTION  10×10   │  center (0, 0, -10)
 //  Z = -5  └──────────┬───────────┘
-//                     │  (~2-unit N-S connection hallway)
+//                     │  N-S corridor (4 wide)
 //  Z = -3  ┌──────────┼────────────┐
 //          │ waiting  │ p_room_1   │  grid top row 10×7, centers (±7, 0, +0.5)
 //  Z = +4  └──────────┼────────────┘
-//                     │  (~3-unit E-W hallway)
+//                     │  E-W corridors
 //  Z = +7  ┌──────────┼────────────┐
 //          │ p_room_2 │ dr_office  │  grid bottom row 10×7, centers (±7, 0, +10.5)
 //  Z = +14 └──────────┴────────────┘
-//  Z = +15  ══════════════════════  ← south edge of floor
+
+/**
+ * Which faces of a room border the outside of the building.
+ * Code-convention for the wall positions:
+ *   negZ = wall at oz − d/2  (entrance / north face of hospital)
+ *   posZ = wall at oz + d/2  (south face)
+ *   negX = wall at ox − w/2  (west face)
+ *   posX = wall at ox + w/2  (east face)
+ */
+type WallSide = "posZ" | "negZ" | "negX" | "posX";
 
 interface RoomSpec {
   id: RoomId;
   pos: Vector3;
   entryPoint: Vector3;
   roomD: number;
-  /** Matched against HospitalRoomLayoutData.name to find interior layout data. */
   layoutName: string;
+  extWalls: WallSide[];
+  /** negZ wall has a door opening (reception public entrance). */
+  isEntrance?: boolean;
 }
 
 const ROOM_SPECS: RoomSpec[] = [
   {
     id: "reception",
-    pos: new Vector3(0, 0, -10),
-    entryPoint: new Vector3(0, 0, -10),
+    pos: new Vector3(0, 0, -8),
+    entryPoint: new Vector3(0, 0, -8),
     roomD: RECEPTION_D,
     layoutName: "Reception",
+    extWalls: ["negZ", "negX", "posX"],
+    isEntrance: true,
   },
   {
     id: "waiting",
@@ -107,6 +126,7 @@ const ROOM_SPECS: RoomSpec[] = [
     entryPoint: new Vector3(-7, 0, 0.5),
     roomD: GRID_D,
     layoutName: "Office",
+    extWalls: ["negZ", "negX"],
   },
   {
     id: "patient_room_1",
@@ -114,6 +134,7 @@ const ROOM_SPECS: RoomSpec[] = [
     entryPoint: new Vector3(7, 0, 0.5),
     roomD: GRID_D,
     layoutName: "Beds",
+    extWalls: ["negZ", "posX"],
   },
   {
     id: "patient_room_2",
@@ -121,6 +142,7 @@ const ROOM_SPECS: RoomSpec[] = [
     entryPoint: new Vector3(-7, 0, 10.5),
     roomD: GRID_D,
     layoutName: "Beds",
+    extWalls: ["posZ", "negX"],
   },
   {
     id: "doctor_office",
@@ -128,6 +150,7 @@ const ROOM_SPECS: RoomSpec[] = [
     entryPoint: new Vector3(7, 0, 10.5),
     roomD: GRID_D,
     layoutName: "Office",
+    extWalls: ["posZ", "posX"],
   },
 ];
 
@@ -158,51 +181,122 @@ export async function fetchRoomsJson(): Promise<HospitalRoomsJson | null> {
 /**
  * Builds all hospital room and hallway geometry into `scene`.
  * Returns a dispose function that cleans up all objects this function created.
- * Safe to call with roomsJson=null — rooms render with hallway textures only.
+ * Safe to call with roomsJson=null — rooms render with placeholder textures only.
  */
 export function buildHospitalGeometry(
   scene: Scene,
   roomsJson: HospitalRoomsJson | null,
 ): () => void {
-  const meshes: AbstractMesh[]   = [];
-  const materials: Material[]    = [];
-  const textures: BaseTexture[]  = [];
+  const meshes: AbstractMesh[]  = [];
+  const materials: Material[]   = [];
+  const textures: BaseTexture[] = [];
   let disposed = false;
 
   const hallwayWallTex  = roomsJson?.hallwayTexture ?? null;
   const hallwayFloorTex = roomsJson?.hallwayFloorTexture ?? null;
 
-  // Build layout-name → data index
   const byName = new Map<string, HospitalRoomLayoutData>();
   for (const r of (roomsJson?.rooms ?? [])) byName.set(r.name, r);
+
+  // ── Exterior grass plane ────────────────────────────────────────────────────
+  // Sits just above the base floor (y=0.005); visible wherever room/hallway
+  // floors (y=0.01 or 0.03) do not cover it.
+  {
+    const S = 80;
+    const grass = MeshBuilder.CreateGround("grass_exterior", { width: S, height: S }, scene);
+    grass.position.y = 0.005;
+    grass.material = makeMat(scene, materials, textures,
+      "grass_ext", null, S / TILE, S / TILE, () => phGrass(scene));
+    grass.isPickable = false;
+    meshes.push(grass);
+  }
 
   // ── Per-room geometry ───────────────────────────────────────────────────────
   for (const spec of ROOM_SPECS) {
     const layout = byName.get(spec.layoutName) ?? null;
-    const ox = spec.pos.x;
-    const oz = spec.pos.z;
-    const w  = ROOM_W;
-    const d  = spec.roomD;
+    const ox  = spec.pos.x;
+    const oz  = spec.pos.z;
+    const w   = ROOM_W;
+    const d   = spec.roomD;
     const pfx = spec.id;
+    const ext = new Set(spec.extWalls);
+    const interiorWallTex = layout?.wallTexture ?? null;
 
-    // Floor — room texture when layout present, otherwise hallway floor texture
+    // Floor
     buildFloorAt(scene, meshes, materials, textures,
       pfx, ox, oz, w, d, layout?.floorTexture ?? hallwayFloorTex);
 
-    // North and west walls use the room's interior wall texture when a layout is
-    // present (matching debug_rooms convention — these are the walls visible from
-    // the camera's SE viewpoint). South and east walls always use hallway texture.
-    const interiorWallTex = layout?.wallTexture ?? null;
-    buildXWallAt(scene, meshes, materials, textures,
-      `${pfx}_n`, ox, oz + d / 2 + WALL_T / 2, w,
-      interiorWallTex ?? hallwayWallTex, () => phNorthWall(scene));
-    buildXWallAt(scene, meshes, materials, textures,
-      `${pfx}_s`, ox, oz - d / 2 - WALL_T / 2, w, hallwayWallTex, () => phHallway(scene));
-    buildZWallAt(scene, meshes, materials, textures,
-      `${pfx}_w`, ox - w / 2 - WALL_T / 2, oz, d,
-      interiorWallTex ?? hallwayWallTex, () => phWestWall(scene));
-    buildZWallAt(scene, meshes, materials, textures,
-      `${pfx}_e`, ox + w / 2 + WALL_T / 2, oz, d, hallwayWallTex, () => phHallway(scene));
+    // ── negZ wall  (oz − d/2 face) ────────────────────────────────────────────
+    {
+      const isExt  = ext.has("negZ");
+      const wt     = isExt ? EXT_WALL_T : WALL_T;
+      const wallZ  = oz - d / 2 - wt / 2;
+      // N/S walls extend by wt on each side → gapless corners
+      const extW   = w + 2 * wt;
+
+      if (isExt) {
+        if (spec.isEntrance) {
+          buildEntranceXWall(scene, meshes, materials, textures,
+            `${pfx}_s`, ox, wallZ, w, wt);
+        } else {
+          buildSolidXWall(scene, meshes, materials, textures,
+            `${pfx}_s`, ox, wallZ, extW, wt, null, () => phExteriorWall(scene));
+        }
+      } else {
+        buildXWallAt(scene, meshes, materials, textures,
+          `${pfx}_s`, ox, wallZ, w, wt, wt,
+          hallwayWallTex, () => phHallway(scene));
+      }
+    }
+
+    // ── posZ wall  (oz + d/2 face) ────────────────────────────────────────────
+    {
+      const isExt  = ext.has("posZ");
+      const wt     = isExt ? EXT_WALL_T : WALL_T;
+      const wallZ  = oz + d / 2 + wt / 2;
+      const extW   = w + 2 * wt;
+
+      if (isExt) {
+        buildSolidXWall(scene, meshes, materials, textures,
+          `${pfx}_n`, ox, wallZ, extW, wt, null, () => phExteriorWall(scene));
+      } else {
+        buildXWallAt(scene, meshes, materials, textures,
+          `${pfx}_n`, ox, wallZ, w, wt, wt,
+          interiorWallTex ?? hallwayWallTex, () => phNorthWall(scene));
+      }
+    }
+
+    // ── negX wall  (ox − w/2 face) ────────────────────────────────────────────
+    {
+      const isExt = ext.has("negX");
+      const wt    = isExt ? EXT_WALL_T : WALL_T;
+      const wallX = ox - w / 2 - wt / 2;
+
+      if (isExt) {
+        buildSolidZWall(scene, meshes, materials, textures,
+          `${pfx}_w`, wallX, oz, d, wt, null, () => phExteriorWall(scene));
+      } else {
+        buildZWallAt(scene, meshes, materials, textures,
+          `${pfx}_w`, wallX, oz, d, wt,
+          interiorWallTex ?? hallwayWallTex, () => phWestWall(scene));
+      }
+    }
+
+    // ── posX wall  (ox + w/2 face) ────────────────────────────────────────────
+    {
+      const isExt = ext.has("posX");
+      const wt    = isExt ? EXT_WALL_T : WALL_T;
+      const wallX = ox + w / 2 + wt / 2;
+
+      if (isExt) {
+        buildSolidZWall(scene, meshes, materials, textures,
+          `${pfx}_e`, wallX, oz, d, wt, null, () => phExteriorWall(scene));
+      } else {
+        buildZWallAt(scene, meshes, materials, textures,
+          `${pfx}_e`, wallX, oz, d, wt,
+          hallwayWallTex, () => phHallway(scene));
+      }
+    }
 
     // Interior content (only when layout is present)
     if (layout) {
@@ -216,23 +310,49 @@ export function buildHospitalGeometry(
   }
 
   // ── Hallway floor strips ────────────────────────────────────────────────────
-  //
-  // N-S central corridor between left and right columns, running from the south
-  // face of reception all the way to the south face of the bottom grid row.
-  //   X: -2 to +2 (width 4)
-  const nsZ0 = -10 + RECEPTION_D / 2 + WALL_T; // reception south outer face ≈ -4.85
-  const nsZ1 = 10.5 + GRID_D / 2 + WALL_T;     // bottom row south outer face ≈ 14.15
+  // Use room inner boundaries (oz ± d/2) so strips butt up against room floors
+  // with zero gap — no grass can peek through.
+
+  // N-S central corridor: from reception south inner face to grid bottom south inner face
+  const nsZ0 = -8  + RECEPTION_D / 2;   // = -3  (reception south inner face)
+  const nsZ1 = 10.5 + GRID_D      / 2;  // = +14 (bottom row south inner face)
   buildHallwayStrip(scene, meshes, materials, textures,
     0, (nsZ0 + nsZ1) / 2, 4, nsZ1 - nsZ0, hallwayFloorTex);
 
-  // E-W corridors between the two grid rows (left and right of the N-S strip).
-  //   Z: between top-row south face and bottom-row north face
-  const ewZ0 = 0.5 + GRID_D / 2 + WALL_T;   // top row south outer face ≈ 4.15
-  const ewZ1 = 10.5 - GRID_D / 2 - WALL_T;  // bottom row north outer face ≈ 6.85
+  // E-W corridors between the two grid rows
+  const ewZ0 = 0.5  + GRID_D / 2;  // = +4 (top row south inner face)
+  const ewZ1 = 10.5 - GRID_D / 2;  // = +7 (bottom row north inner face)
   buildHallwayStrip(scene, meshes, materials, textures,
-    -7, (ewZ0 + ewZ1) / 2, 10, ewZ1 - ewZ0, hallwayFloorTex); // left strip
+    -7, (ewZ0 + ewZ1) / 2, 10, ewZ1 - ewZ0, hallwayFloorTex);
   buildHallwayStrip(scene, meshes, materials, textures,
-    7, (ewZ0 + ewZ1) / 2, 10, ewZ1 - ewZ0, hallwayFloorTex);  // right strip
+    7, (ewZ0 + ewZ1) / 2, 10, ewZ1 - ewZ0, hallwayFloorTex);
+
+  // ── Exterior bridge walls: close corridor gaps in the building perimeter ─────
+  // Wherever an interior hallway strip meets an exterior face of the building
+  // there is a gap in that face equal to the corridor width.  These solid
+  // segments overlap the adjacent walls by one EXT_WALL_T to seal every gap.
+  {
+    // N-S corridor (X = -2…+2) meets the grid north and south exterior faces.
+    const nsW = 4 + 2 * EXT_WALL_T;
+    const bridgeNorthZ = 0.5  - GRID_D / 2 - EXT_WALL_T / 2; // grid top   north face
+    const bridgeSouthZ = 10.5 + GRID_D / 2 + EXT_WALL_T / 2; // grid bottom south face
+    buildSolidXWall(scene, meshes, materials, textures,
+      "ext_bridge_n", 0, bridgeNorthZ, nsW, EXT_WALL_T, null, () => phExteriorWall(scene));
+    buildSolidXWall(scene, meshes, materials, textures,
+      "ext_bridge_s", 0, bridgeSouthZ, nsW, EXT_WALL_T, null, () => phExteriorWall(scene));
+
+    // E-W corridor (Z = +4…+7) meets the grid east and west exterior faces.
+    // patient_room_1/waiting east/west walls end at Z=+4;
+    // doctor_office/patient_room_2 east/west walls start at Z=+7.
+    const ewD = ewZ1 - ewZ0 + 2 * EXT_WALL_T; // = 3 + 2×0.45 = 3.9
+    const ewCZ = (ewZ0 + ewZ1) / 2;            // = 5.5
+    const bridgeEastX  =  7 + ROOM_W / 2 + EXT_WALL_T / 2; //  +12.225
+    const bridgeWestX  = -7 - ROOM_W / 2 - EXT_WALL_T / 2; //  -12.225
+    buildSolidZWall(scene, meshes, materials, textures,
+      "ext_bridge_e", bridgeEastX, ewCZ, ewD, EXT_WALL_T, null, () => phExteriorWall(scene));
+    buildSolidZWall(scene, meshes, materials, textures,
+      "ext_bridge_w", bridgeWestX, ewCZ, ewD, EXT_WALL_T, null, () => phExteriorWall(scene));
+  }
 
   return () => {
     disposed = true;
@@ -253,18 +373,12 @@ function buildFloorAt(
   materials: Material[],
   textures: BaseTexture[],
   prefix: string,
-  ox: number,
-  oz: number,
-  w: number,
-  d: number,
+  ox: number, oz: number, w: number, d: number,
   texPath: string | null,
 ): void {
   const mesh = MeshBuilder.CreateBox(
-    `floor_${prefix}`,
-    { width: w, height: 0.04, depth: d },
-    scene,
-  );
-  mesh.position.set(ox, 0.03, oz); // slightly above hallway strips and base floor
+    `floor_${prefix}`, { width: w, height: 0.04, depth: d }, scene);
+  mesh.position.set(ox, 0.03, oz);
   mesh.material = makeMat(scene, materials, textures,
     `floor_${prefix}`, texPath, d / TILE, w / TILE, () => phFloor(scene));
   mesh.isPickable = false;
@@ -278,25 +392,20 @@ function buildHallwayStrip(
   meshes: AbstractMesh[],
   materials: Material[],
   textures: BaseTexture[],
-  cx: number,
-  cz: number,
-  width: number,
-  depth: number,
+  cx: number, cz: number, width: number, depth: number,
   texPath: string | null,
 ): void {
   const mesh = MeshBuilder.CreateBox(
-    `hallway_${cx}_${cz}`,
-    { width, height: 0.04, depth },
-    scene,
-  );
-  mesh.position.set(cx, 0.01, cz); // above base floor, below room floors
+    `hallway_${cx}_${cz}`, { width, height: 0.04, depth }, scene);
+  mesh.position.set(cx, 0.01, cz);
   mesh.material = makeMat(scene, materials, textures,
     `hallway_${cx}_${cz}`, texPath, depth / TILE, width / TILE, () => phHallwayFloor(scene));
   mesh.isPickable = false;
   meshes.push(mesh);
 }
 
-// ── X-axis wall (runs along X, positioned at a fixed Z) ───────────────────────
+// ── X-axis wall with door opening ─────────────────────────────────────────────
+// Runs along X at a fixed Z.  The wall total half-span = roomW/2 + extraEachSide.
 
 function buildXWallAt(
   scene: Scene,
@@ -304,44 +413,44 @@ function buildXWallAt(
   materials: Material[],
   textures: BaseTexture[],
   prefix: string,
-  centerX: number,
-  wallZ: number,
-  roomW: number,
+  centerX: number, wallZ: number,
+  roomW: number, wallT: number, extraEachSide: number,
   texPath: string | null,
   phFn: () => DynamicTexture,
 ): void {
-  const half    = roomW / 2;
+  const half    = roomW / 2 + extraEachSide;
   const halfD   = DOOR_W / 2;
   const sideW   = half - halfD;
   const sideCX  = halfD + sideW / 2;
   const headerH = ROOM_H - DOOR_H;
 
-  const mk = (n: string, w: number, h: number) =>
-    makeMat(scene, materials, textures, n, texPath, w / TILE, h / TILE, phFn);
+  const mk = (n: string, uw: number, uh: number) =>
+    makeMat(scene, materials, textures, n, texPath, uw / TILE, uh / TILE, phFn);
 
   const left = MeshBuilder.CreateBox(`${prefix}_l`,
-    { width: sideW, height: ROOM_H, depth: WALL_T }, scene);
+    { width: sideW, height: ROOM_H, depth: wallT }, scene);
   left.position.set(centerX - sideCX, ROOM_H / 2, wallZ);
   left.material = mk(`${prefix}_l`, sideW, ROOM_H);
   left.isPickable = false;
   meshes.push(left);
 
   const right = MeshBuilder.CreateBox(`${prefix}_r`,
-    { width: sideW, height: ROOM_H, depth: WALL_T }, scene);
+    { width: sideW, height: ROOM_H, depth: wallT }, scene);
   right.position.set(centerX + sideCX, ROOM_H / 2, wallZ);
   right.material = mk(`${prefix}_r`, sideW, ROOM_H);
   right.isPickable = false;
   meshes.push(right);
 
   const header = MeshBuilder.CreateBox(`${prefix}_h`,
-    { width: DOOR_W, height: headerH, depth: WALL_T }, scene);
+    { width: DOOR_W, height: headerH, depth: wallT }, scene);
   header.position.set(centerX, DOOR_H + headerH / 2, wallZ);
   header.material = mk(`${prefix}_h`, DOOR_W, headerH);
   header.isPickable = false;
   meshes.push(header);
 }
 
-// ── Z-axis wall (runs along Z, positioned at a fixed X) ───────────────────────
+// ── Z-axis wall with door opening ─────────────────────────────────────────────
+// Runs along Z at a fixed X.
 
 function buildZWallAt(
   scene: Scene,
@@ -349,9 +458,8 @@ function buildZWallAt(
   materials: Material[],
   textures: BaseTexture[],
   prefix: string,
-  wallX: number,
-  centerZ: number,
-  roomD: number,
+  wallX: number, centerZ: number,
+  roomD: number, wallT: number,
   texPath: string | null,
   phFn: () => DynamicTexture,
 ): void {
@@ -361,29 +469,107 @@ function buildZWallAt(
   const sideCZ  = halfD + sideD / 2;
   const headerH = ROOM_H - DOOR_H;
 
-  const mk = (n: string, d: number, h: number) =>
-    makeMat(scene, materials, textures, n, texPath, d / TILE, h / TILE, phFn);
+  const mk = (n: string, ud: number, uh: number) =>
+    makeMat(scene, materials, textures, n, texPath, ud / TILE, uh / TILE, phFn);
 
   const left = MeshBuilder.CreateBox(`${prefix}_l`,
-    { width: WALL_T, height: ROOM_H, depth: sideD }, scene);
+    { width: wallT, height: ROOM_H, depth: sideD }, scene);
   left.position.set(wallX, ROOM_H / 2, centerZ - sideCZ);
   left.material = mk(`${prefix}_l`, sideD, ROOM_H);
   left.isPickable = false;
   meshes.push(left);
 
   const right = MeshBuilder.CreateBox(`${prefix}_r`,
-    { width: WALL_T, height: ROOM_H, depth: sideD }, scene);
+    { width: wallT, height: ROOM_H, depth: sideD }, scene);
   right.position.set(wallX, ROOM_H / 2, centerZ + sideCZ);
   right.material = mk(`${prefix}_r`, sideD, ROOM_H);
   right.isPickable = false;
   meshes.push(right);
 
   const header = MeshBuilder.CreateBox(`${prefix}_h`,
-    { width: WALL_T, height: headerH, depth: DOOR_W }, scene);
+    { width: wallT, height: headerH, depth: DOOR_W }, scene);
   header.position.set(wallX, DOOR_H + headerH / 2, centerZ);
   header.material = mk(`${prefix}_h`, DOOR_W, headerH);
   header.isPickable = false;
   meshes.push(header);
+}
+
+// ── Solid exterior wall (X-axis, no door) ─────────────────────────────────────
+
+function buildSolidXWall(
+  scene: Scene,
+  meshes: AbstractMesh[],
+  materials: Material[],
+  textures: BaseTexture[],
+  prefix: string,
+  centerX: number, wallZ: number,
+  width: number, wallT: number,
+  texPath: string | null,
+  phFn: () => DynamicTexture,
+): void {
+  const mesh = MeshBuilder.CreateBox(prefix,
+    { width, height: ROOM_H, depth: wallT }, scene);
+  mesh.position.set(centerX, ROOM_H / 2, wallZ);
+  mesh.material = makeMat(scene, materials, textures,
+    prefix, texPath, width / TILE, ROOM_H / TILE, phFn);
+  mesh.isPickable = false;
+  meshes.push(mesh);
+}
+
+// ── Solid exterior wall (Z-axis, no door) ─────────────────────────────────────
+
+function buildSolidZWall(
+  scene: Scene,
+  meshes: AbstractMesh[],
+  materials: Material[],
+  textures: BaseTexture[],
+  prefix: string,
+  wallX: number, centerZ: number,
+  depth: number, wallT: number,
+  texPath: string | null,
+  phFn: () => DynamicTexture,
+): void {
+  const mesh = MeshBuilder.CreateBox(prefix,
+    { width: wallT, height: ROOM_H, depth }, scene);
+  mesh.position.set(wallX, ROOM_H / 2, centerZ);
+  mesh.material = makeMat(scene, materials, textures,
+    prefix, texPath, depth / TILE, ROOM_H / TILE, phFn);
+  mesh.isPickable = false;
+  meshes.push(mesh);
+}
+
+// ── Reception entrance wall (exterior X-axis, with door opening + door panel) ──
+
+function buildEntranceXWall(
+  scene: Scene,
+  meshes: AbstractMesh[],
+  materials: Material[],
+  textures: BaseTexture[],
+  prefix: string,
+  centerX: number, wallZ: number,
+  roomW: number, wallT: number,
+): void {
+  // Side panels + header using hospital facade texture
+  buildXWallAt(scene, meshes, materials, textures,
+    prefix, centerX, wallZ, roomW, wallT, wallT,
+    null, () => phFrontWall(scene));
+
+  // Glass-door plane in the opening — faces outward (−Z direction)
+  const doorFill = MeshBuilder.CreatePlane(`${prefix}_door`,
+    { width: DOOR_W, height: DOOR_H }, scene);
+  doorFill.position.set(centerX, DOOR_H / 2, wallZ - wallT / 2 - 0.01);
+  doorFill.rotation.y = Math.PI;
+  const doorMat = new StandardMaterial(`${prefix}_door_mat`, scene);
+  const doorTex = new DynamicTexture(`${prefix}_door_tex`,
+    { width: 256, height: 256 }, scene, true);
+  phDoorInto(doorTex);
+  doorMat.diffuseTexture = doorTex;
+  doorMat.backFaceCulling = false;
+  doorFill.material = doorMat;
+  doorFill.isPickable = false;
+  materials.push(doorMat);
+  textures.push(doorTex);
+  meshes.push(doorFill);
 }
 
 // ── Extra texture placements (decals) ─────────────────────────────────────────
@@ -394,10 +580,8 @@ function buildExtraTexturesAt(
   materials: Material[],
   _textures: BaseTexture[],
   prefix: string,
-  ox: number,
-  oz: number,
-  roomW: number,
-  roomD: number,
+  ox: number, oz: number,
+  roomW: number, roomD: number,
   placements: NonNullable<HospitalRoomLayoutData["extraTextures"]>,
 ): void {
   for (const p of placements) {
@@ -461,12 +645,11 @@ function buildExtraTexturesAt(
 
 async function loadModelsAt(
   scene: Scene,
-  ox: number,
-  oz: number,
+  ox: number, oz: number,
   layout: HospitalRoomLayoutData,
 ): Promise<AbstractMesh[]> {
   const result: AbstractMesh[] = [];
-  const models   = layout.models   ?? [];
+  const models     = layout.models   ?? [];
   const placements = layout.placements ?? [];
 
   const byModel = new Map<string, typeof placements>();
@@ -479,11 +662,7 @@ async function loadModelsAt(
   for (const modelDef of models) {
     const placed = byModel.get(modelDef.id) ?? [];
     if (placed.length === 0) continue;
-
-    if (!modelDef.model) {
-      // Model not yet generated — skip silently rather than showing placeholder boxes
-      continue;
-    }
+    if (!modelDef.model) continue; // not yet generated — skip silently
 
     const url  = "/" + modelDef.model;
     const last = url.lastIndexOf("/");
@@ -516,8 +695,7 @@ function makeMat(
   textures: BaseTexture[],
   name: string,
   texPath: string | null,
-  uScale: number,
-  vScale: number,
+  uScale: number, vScale: number,
   ph: () => DynamicTexture,
 ): StandardMaterial {
   const mat = new StandardMaterial(`${name}_mat`, scene);
@@ -525,7 +703,7 @@ function makeMat(
     const tex = new Texture(
       "/" + texPath, scene, false, true, Texture.TRILINEAR_SAMPLINGMODE,
       null,
-      (msg, ex) => console.warn(`[HospitalLayout] Texture failed to load: ${texPath}`, msg, ex),
+      (msg, ex) => console.warn(`[HospitalLayout] Texture failed: ${texPath}`, msg, ex),
     );
     tex.uScale = uScale;
     tex.vScale = vScale;
@@ -564,14 +742,12 @@ function phNorthWall(scene: Scene): DynamicTexture {
   const ctx = t.getContext() as CanvasRenderingContext2D;
   ctx.fillStyle = "#edebe6";
   ctx.fillRect(0, 0, size, size);
-  ctx.strokeStyle = "#c8c4bc";
-  ctx.lineWidth = 3;
-  const cols = 4; const rows = 5;
-  for (let i = 1; i < cols; i++) {
-    ctx.beginPath(); ctx.moveTo((i * size) / cols, 0); ctx.lineTo((i * size) / cols, size); ctx.stroke();
+  ctx.strokeStyle = "#c8c4bc"; ctx.lineWidth = 3;
+  for (let i = 1; i < 4; i++) {
+    ctx.beginPath(); ctx.moveTo((i * size) / 4, 0); ctx.lineTo((i * size) / 4, size); ctx.stroke();
   }
-  for (let j = 1; j < rows; j++) {
-    ctx.beginPath(); ctx.moveTo(0, (j * size) / rows); ctx.lineTo(size, (j * size) / rows); ctx.stroke();
+  for (let j = 1; j < 5; j++) {
+    ctx.beginPath(); ctx.moveTo(0, (j * size) / 5); ctx.lineTo(size, (j * size) / 5); ctx.stroke();
   }
   t.update();
   return t;
@@ -581,15 +757,12 @@ function phWestWall(scene: Scene): DynamicTexture {
   const size = 256;
   const t = new DynamicTexture("ph_west_wall", { width: size, height: size }, scene, true);
   const ctx = t.getContext() as CanvasRenderingContext2D;
-  ctx.fillStyle = "#c4d0be";
-  ctx.fillRect(0, 0, size, size);
-  ctx.strokeStyle = "#b8c4b2";
-  ctx.lineWidth = 1;
+  ctx.fillStyle = "#c4d0be"; ctx.fillRect(0, 0, size, size);
+  ctx.strokeStyle = "#b8c4b2"; ctx.lineWidth = 1;
   for (let x = 8; x < size; x += 24) {
     ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x + 4, size); ctx.stroke();
   }
-  ctx.fillStyle = "#aabaa4";
-  ctx.fillRect(0, size - 20, size, 20);
+  ctx.fillStyle = "#aabaa4"; ctx.fillRect(0, size - 20, size, 20);
   t.update();
   return t;
 }
@@ -598,8 +771,7 @@ function phHallway(scene: Scene): DynamicTexture {
   const size = 256;
   const t = new DynamicTexture("ph_hallway_wall", { width: size, height: size }, scene, true);
   const ctx = t.getContext() as CanvasRenderingContext2D;
-  ctx.fillStyle = "#cec3a8";
-  ctx.fillRect(0, 0, size, size);
+  ctx.fillStyle = "#cec3a8"; ctx.fillRect(0, 0, size, size);
   ctx.fillStyle = "#c4b99e";
   for (let y = 0; y < size; y += 40) ctx.fillRect(0, y, size, 18);
   t.update();
@@ -610,16 +782,93 @@ function phHallwayFloor(scene: Scene): DynamicTexture {
   const size = 256;
   const t = new DynamicTexture("ph_hallway_floor", { width: size, height: size }, scene, true);
   const ctx = t.getContext() as CanvasRenderingContext2D;
-  ctx.fillStyle = "#b8b4ae";
-  ctx.fillRect(0, 0, size, size);
-  ctx.strokeStyle = "#a8a49e";
-  ctx.lineWidth = 2;
+  ctx.fillStyle = "#b8b4ae"; ctx.fillRect(0, 0, size, size);
+  ctx.strokeStyle = "#a8a49e"; ctx.lineWidth = 2;
   const step = size / 4;
   for (let x = step; x < size; x += step) {
     ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, size); ctx.stroke();
   }
   for (let y = step; y < size; y += step) {
     ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(size, y); ctx.stroke();
+  }
+  t.update();
+  return t;
+}
+
+/** Brick/concrete exterior wall. */
+function phExteriorWall(scene: Scene): DynamicTexture {
+  const size = 256;
+  const t = new DynamicTexture("ph_ext_wall", { width: size, height: size }, scene, true);
+  const ctx = t.getContext() as CanvasRenderingContext2D;
+  ctx.fillStyle = "#b8895a";        // warm brick base
+  ctx.fillRect(0, 0, size, size);
+  ctx.fillStyle = "#caa882";        // mortar / lighter brick edges
+  const bH = 22; const bW = 54;
+  for (let row = 0; row * bH < size + bH; row++) {
+    const offX = (row % 2 === 0) ? 0 : bW / 2;
+    ctx.fillRect(0, row * bH, size, 3);              // horizontal mortar line
+    for (let col = offX - bW; col < size + bW; col += bW) {
+      ctx.fillRect(col, row * bH, 3, bH);            // vertical mortar line
+    }
+  }
+  t.update();
+  return t;
+}
+
+/** Clean hospital facade for the reception front wall. */
+function phFrontWall(scene: Scene): DynamicTexture {
+  const size = 256;
+  const t = new DynamicTexture("ph_front_wall", { width: size, height: size }, scene, true);
+  const ctx = t.getContext() as CanvasRenderingContext2D;
+  // Off-white facade
+  ctx.fillStyle = "#f0efeb"; ctx.fillRect(0, 0, size, size);
+  // Blue header band
+  ctx.fillStyle = "#2a6faa"; ctx.fillRect(0, 0, size, 28);
+  // Light panels / window lines
+  ctx.strokeStyle = "#d8d6d0"; ctx.lineWidth = 2;
+  for (let x = 48; x < size; x += 48) {
+    ctx.beginPath(); ctx.moveTo(x, 28); ctx.lineTo(x, size); ctx.stroke();
+  }
+  // Red cross emblem
+  ctx.fillStyle = "#cc2222";
+  ctx.fillRect(size / 2 - 20, size / 2 - 6, 40, 12);
+  ctx.fillRect(size / 2 - 6, size / 2 - 20, 12, 40);
+  t.update();
+  return t;
+}
+
+/** Glass-panel automatic door. Used inline by buildEntranceXWall. */
+function phDoorInto(t: DynamicTexture): void {
+  const size = 256;
+  const ctx = t.getContext() as CanvasRenderingContext2D;
+  // Dark frame
+  ctx.fillStyle = "#1a3a5c"; ctx.fillRect(0, 0, size, size);
+  // Two glass panels
+  ctx.fillStyle = "#a8d4f0";
+  ctx.fillRect(8,  8, size / 2 - 14, size - 16);
+  ctx.fillRect(size / 2 + 6, 8, size / 2 - 14, size - 16);
+  // Gold push-handles
+  ctx.fillStyle = "#e8c840"; ctx.lineWidth = 4; ctx.strokeStyle = "#e8c840";
+  ctx.beginPath(); ctx.moveTo(size / 2 - 10, size * 0.55); ctx.lineTo(size / 2 - 10, size * 0.7); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(size / 2 + 10, size * 0.55); ctx.lineTo(size / 2 + 10, size * 0.7); ctx.stroke();
+  t.update();
+}
+
+/** Grass / lawn ground. */
+function phGrass(scene: Scene): DynamicTexture {
+  const size = 256;
+  const t = new DynamicTexture("ph_grass", { width: size, height: size }, scene, true);
+  const ctx = t.getContext() as CanvasRenderingContext2D;
+  ctx.fillStyle = "#5a8a3a"; ctx.fillRect(0, 0, size, size);
+  // Darker patches
+  ctx.fillStyle = "#4e7a30";
+  for (let i = 0; i < 40; i++) {
+    ctx.fillRect((i * 73) % size, (i * 97) % size, 12 + (i * 17) % 20, 8 + (i * 11) % 12);
+  }
+  // Lighter blades
+  ctx.fillStyle = "#68a044";
+  for (let i = 0; i < 30; i++) {
+    ctx.fillRect((i * 113) % size, (i * 83) % size, 4 + (i * 7) % 10, 14 + (i * 13) % 18);
   }
   t.update();
   return t;

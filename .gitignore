@@ -1,5 +1,4 @@
 **/.DS_Store
-public
 kenney
 quaternius-animation-library-GLB/
 quaternius-characters-GLB/
@@ -8,3 +7,6 @@ quaternius-characters-GLB/
 .env
 .env.*
 !.env.example
+# public/ is bundled into public.tar.gz (tracked via Git LFS)
+# Run: bash scripts/unbundle_public.sh  to restore it
+public/
