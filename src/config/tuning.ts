@@ -20,6 +20,9 @@ export const Tuning = {
   cameraRadius: 30,
   cameraOrthoHalfSize: 7,              // ortho zoom level (halved = 2× zoom)
   cameraPanSpeed: 12,                   // world units/sec when panning with WASD/arrows
+  cameraZoomMin: 4,        // tight zoom — individual characters fill the screen
+  cameraZoomMax: 35,       // wide zoom — see whole hospital
+  cameraZoomSpeed: 1.5,    // ortho half-size change per scroll notch
 
   // ───────────────────────────────────────────────────────────────────────────
   // Arena / Hospital

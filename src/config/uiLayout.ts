@@ -1,7 +1,7 @@
 export const UiLayout = {
-  designWidth: 480,
-  designHeight: 800,
-  baseUiScale: 1.5,
+  designWidth: 1280,
+  designHeight: 720,
+  baseUiScale: 1,
   maxShellScale: 2.5,
   maxRenderScale: 3,
 };
