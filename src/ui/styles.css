@@ -161,43 +161,73 @@ body {
 .jk_hud {
   position: absolute;
   inset: 0;
-  display: grid;
-  align-content: start;
-  justify-content: start;
-  padding: 14px;
   pointer-events: none;
+  z-index: 5;
 }
 
-.jk_hud_card {
-  pointer-events: none;
-  padding: 10px 12px;
-  border-radius: 12px;
-  background: rgba(0, 0, 0, 0.45);
-  color: rgba(255, 255, 255, 0.92);
-  backdrop-filter: blur(8px);
-}
+/* ─── Illustrated HUD bar ─── */
 
-.jk_hud_row {
+.hh_hud_bar {
+  position: absolute;
+  top: 10px;
+  left: 50%;
+  transform: translateX(-50%);
   display: flex;
-  justify-content: space-between;
-  gap: 14px;
-  margin-bottom: 6px;
+  gap: 6px;
+  padding: 6px 10px;
+  border-radius: 16px;
+  background: rgba(10, 15, 30, 0.6);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.35);
 }
 
-.jk_hud_stat {
+.hh_hud_item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px 3px 3px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.06);
+  transition: background 0.2s;
+}
+
+.hh_hud_icon {
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
+  flex-shrink: 0;
+  filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.3));
+}
+
+.hh_hud_value {
+  font-size: 14px;
+  font-weight: 800;
+  color: #fff;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+  white-space: nowrap;
+}
+
+.hh_alert {
+  position: absolute;
+  top: 56px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 6px 16px;
+  border-radius: 10px;
+  background: rgba(10, 15, 30, 0.7);
+  backdrop-filter: blur(8px);
+  color: #ffd666;
   font-size: 13px;
   font-weight: 700;
+  white-space: nowrap;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+  animation: hh_alert_pop 0.25s ease-out;
 }
 
-.jk_hud_label {
-  font-weight: 600;
-  opacity: 0.7;
-  margin-right: 6px;
-}
-
-.jk_hud_hint {
-  font-size: 13px;
-  opacity: 0.9;
+@keyframes hh_alert_pop {
+  from { opacity: 0; transform: translateX(-50%) translateY(-6px); }
+  to   { opacity: 1; transform: translateX(-50%) translateY(0); }
 }
 
 .jk_panel {

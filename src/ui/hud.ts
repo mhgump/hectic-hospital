@@ -15,12 +15,22 @@ export function mountHud(): HudMount {
   const el = document.createElement("div");
   el.className = "jk_hud";
   el.innerHTML = `
-    <div class="jk_hud_card">
-      <div class="jk_hud_row">
-        <div class="jk_hud_stat"><span class="jk_hud_label">$</span> <span data-hh-money>500</span></div>
-        <div class="jk_hud_stat"><span class="jk_hud_label">Rep</span> <span data-hh-rep>50</span></div>
-        <div class="jk_hud_stat"><span class="jk_hud_label">⏱</span> <span data-hh-timer>3:00</span></div>
-        <div class="jk_hud_stat"><span class="jk_hud_label">Patients</span> <span data-hh-patients>0</span></div>
+    <div class="hh_hud_bar">
+      <div class="hh_hud_item">
+        <img class="hh_hud_icon" src="/assets/ui/hud-money.png" alt="Money" draggable="false">
+        <span class="hh_hud_value" data-hh-money>$500</span>
+      </div>
+      <div class="hh_hud_item">
+        <img class="hh_hud_icon" src="/assets/ui/hud-rep.png" alt="Reputation" draggable="false">
+        <span class="hh_hud_value" data-hh-rep>50</span>
+      </div>
+      <div class="hh_hud_item">
+        <img class="hh_hud_icon" src="/assets/ui/hud-timer.png" alt="Timer" draggable="false">
+        <span class="hh_hud_value" data-hh-timer>3:00</span>
+      </div>
+      <div class="hh_hud_item">
+        <img class="hh_hud_icon" src="/assets/ui/hud-patients.png" alt="Patients" draggable="false">
+        <span class="hh_hud_value" data-hh-patients>0</span>
       </div>
     </div>
     <div class="hh_alert" data-hh-alert style="display:none;"></div>
