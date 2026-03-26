@@ -1,0 +1,322 @@
+
+==> Setup started
+Log file: /Users/roope.rainisto/Documents/gamejam/setup.log
+
+==> Checking network connectivity
+
+==> Checking Xcode Command Line Tools
+
+==> Checking Homebrew
+
+==> Installing nvm
+==> Auto-updating Homebrew...
+Adjust how often this is run with `$HOMEBREW_AUTO_UPDATE_SECS` or disable with
+`$HOMEBREW_NO_AUTO_UPDATE=1`. Hide these hints with `$HOMEBREW_NO_ENV_HINTS=1` (see `man brew`).
+==> Fetching downloads for: nvm
+✔︎ Bottle Manifest nvm (0.40.4)
+✔︎ Bottle nvm (0.40.4)
+==> Pouring nvm--0.40.4.all.bottle.tar.gz
+==> Caveats
+Please note that upstream has asked us to make explicit managing
+nvm via Homebrew is unsupported by them and you should check any
+problems against the standard nvm install method prior to reporting.
+
+You should create NVM's working directory if it doesn't exist:
+  mkdir ~/.nvm
+
+Add the following to your shell profile e.g. ~/.profile or ~/.zshrc:
+  export NVM_DIR="$HOME/.nvm"
+  [ -s "/opt/homebrew/opt/nvm/nvm.sh" ] && \. "/opt/homebrew/opt/nvm/nvm.sh"  # This loads nvm
+  [ -s "/opt/homebrew/opt/nvm/etc/bash_completion.d/nvm" ] && \. "/opt/homebrew/opt/nvm/etc/bash_completion.d/nvm"  # This loads nvm bash_completion
+
+You can set $NVM_DIR to any location, but leaving it unchanged from
+/opt/homebrew/Cellar/nvm/0.40.4 will destroy any nvm-installed Node installations
+upon upgrade/reinstall.
+
+Type `nvm help` for further information.
+==> Summary
+🍺  /opt/homebrew/Cellar/nvm/0.40.4: 10 files, 214.4KB
+==> Running `brew cleanup nvm`...
+Disable this behaviour by setting `HOMEBREW_NO_INSTALL_CLEANUP=1`.
+Hide these hints with `HOMEBREW_NO_ENV_HINTS=1` (see `man brew`).
+==> `brew cleanup` has not been run in the last 30 days, running now...
+Disable this behaviour by setting `HOMEBREW_NO_INSTALL_CLEANUP=1`.
+Hide these hints with `HOMEBREW_NO_ENV_HINTS=1` (see `man brew`).
+Removing: /Users/roope.rainisto/Library/Caches/Homebrew/aom_bottle_manifest--3.13.1... (32.2KB)
+Removing: /Users/roope.rainisto/Library/Caches/Homebrew/aom--3.13.1... (4.2MB)
+Removing: /Users/roope.rainisto/Library/Caches/Homebrew/aribb24_bottle_manifest--1.0.4... (14.7KB)
+Removing: /Users/roope.rainisto/Library/Caches/Homebrew/aribb24--1.0.4... (73.5KB)
+Removing: /Users/roope.rainisto/Library/Caches/Homebrew/c-ares_bottle_manifest--1.34.5-1... (9.8KB)
+Removing: /Users/roope.rainisto/Library/Caches/Homebrew/c-ares--1.34.5... (303.3KB)
+Removing: /Users/roope.rainisto/Library/Caches/Homebrew/cairo_bottle_manifest--1.18.4-1... (37KB)
+Removing: /Users/roope.rainisto/Library/Caches/Homebrew/cairo--1.18.4... (1.6MB)
+Removing: /Users/roope.rainisto/Library/Caches/Homebrew/cjson_bottle_manifest--1.7.19... (11.2KB)
+Removing: /Users/roope.rainisto/Library/Caches/Homebrew/cjson--1.7.19... (59.5KB)
+Removing: /Users/roope.rainisto/Library/Caches/Homebrew/dav1d_bottle_manifest--1.5.2... (7.6KB)
+Removing: /Users/roope.rainisto/Library/Caches/Homebrew/dav1d--1.5.2... (364.3KB)
+Removing: /Users/roope.rainisto/Library/Caches/Homebrew/flac_bottle_manifest--1.5.0... (12.5KB)
+Removing: /Users/roope.rainisto/Library/Caches/Homebrew/flac--1.5.0... (555.7KB)
+Removing: /Users/roope.rainisto/Library/Caches/Homebrew/fontconfig_bottle_manifest--2.17.1-1... (17.3KB)
+Removing: /Users/roope.rainisto/Library/Caches/Homebrew/fontconfig--2.17.1... (400.1KB)
+Removing: /Users/roope.rainisto/Library/Caches/Homebrew/freetype_bottle_manifest--2.14.1_1... (9.2KB)
+Removing: /Users/roope.rainisto/Library/Caches/Homebrew/freetype--2.14.1_1... (991KB)
+Removing: /Users/roope.rainisto/Library/Caches/Homebrew/fribidi_bottle_manifest--1.0.16... (10KB)
+Removing: /Users/roope.rainisto/Library/Caches/Homebrew/fribidi--1.0.16... (99.0KB)
+Removing: /Users/roope.rainisto/Library/Caches/Homebrew/giflib_bottle_manifest--5.2.2... (10.8KB)
+Removing: /Users/roope.rainisto/Library/Caches/Homebrew/giflib--5.2.2... (153.0KB)
+Removing: /Users/roope.rainisto/Library/Caches/Homebrew/gmp_bottle_manifest--6.3.0... (13.3KB)
+Removing: /Users/roope.rainisto/Library/Caches/Homebrew/gmp--6.3.0... (1MB)
+Removing: /Users/roope.rainisto/Library/Caches/Homebrew/graphite2_bottle_manifest--1.3.14-1... (8.0KB)
+Removing: /Users/roope.rainisto/Library/Caches/Homebrew/graphite2--1.3.14... (92.6KB)
+Removing: /Users/roope.rainisto/Library/Caches/Homebrew/highway_bottle_manifest--1.3.0... (9.7KB)
+Removing: /Users/roope.rainisto/Library/Caches/Homebrew/highway--1.3.0... (896.7KB)
+Removing: /Users/roope.rainisto/Library/Caches/Homebrew/imath_bottle_manifest--3.2.2... (7.4KB)
+Removing: /Users/roope.rainisto/Library/Caches/Homebrew/imath--3.2.2... (194.3KB)
+Removing: /Users/roope.rainisto/Library/Caches/Homebrew/jpeg-turbo_bottle_manifest--3.1.2... (10.7KB)
+Removing: /Users/roope.rainisto/Library/Caches/Homebrew/jpeg-turbo--3.1.2... (1MB)
+Removing: /Users/roope.rainisto/Library/Caches/Homebrew/jpeg-xl_bottle_manifest--0.11.1_3... (33.7KB)
+Removing: /Users/roope.rainisto/Library/Caches/Homebrew/jpeg-xl--0.11.1_3... (13.8MB)
+Removing: /Users/roope.rainisto/Library/Caches/Homebrew/krb5_bottle_manifest--1.22.1... (18.4KB)
+Removing: /Users/roope.rainisto/Library/Caches/Homebrew/krb5--1.22.1... (1.3MB)
+Removing: /Users/roope.rainisto/Library/Caches/Homebrew/lame_bottle_manifest--3.100... (16KB)
+Removing: /Users/roope.rainisto/Library/Caches/Homebrew/lame--3.100... (792.0KB)
+Removing: /Users/roope.rainisto/Library/Caches/Homebrew/leptonica_bottle_manifest--1.86.0... (17.3KB)
+Removing: /Users/roope.rainisto/Library/Caches/Homebrew/leptonica--1.86.0... (2.7MB)
+Removing: /Users/roope.rainisto/Library/Caches/Homebrew/libass_bottle_manifest--0.17.4... (38.7KB)
+Removing: /Users/roope.rainisto/Library/Caches/Homebrew/libass--0.17.4... (232.5KB)
+Removing: /Users/roope.rainisto/Library/Caches/Homebrew/libb2_bottle_manifest--0.98.1... (15.3KB)
+Removing: /Users/roope.rainisto/Library/Caches/Homebrew/libb2--0.98.1... (36.6KB)
+Removing: /Users/roope.rainisto/Library/Caches/Homebrew/libdeflate_bottle_manifest--1.25... (7.8KB)
+Removing: /Users/roope.rainisto/Library/Caches/Homebrew/libdeflate--1.25... (113.3KB)
+Removing: /Users/roope.rainisto/Library/Caches/Homebrew/libevent_bottle_manifest--2.1.12_1... (17KB)
+Removing: /Users/roope.rainisto/Library/Caches/Homebrew/libevent--2.1.12_1... (738.7KB)
+Removing: /Users/roope.rainisto/Library/Caches/Homebrew/libidn2_bottle_manifest--2.3.8... (12.8KB)
+Removing: /Users/roope.rainisto/Library/Caches/Homebrew/libidn2--2.3.8... (309.8KB)
+Removing: /Users/roope.rainisto/Library/Caches/Homebrew/libmicrohttpd_bottle_manifest--1.0.2... (24.9KB)
+Removing: /Users/roope.rainisto/Library/Caches/Homebrew/libmicrohttpd--1.0.2... (482.2KB)
+Removing: /Users/roope.rainisto/Library/Caches/Homebrew/libogg_bottle_manifest--1.3.6... (9.3KB)
+Removing: /Users/roope.rainisto/Library/Caches/Homebrew/libogg--1.3.6... (234.7KB)
+Removing: /Users/roope.rainisto/Library/Caches/Homebrew/libsamplerate_bottle_manifest--0.2.2-1... (9.5KB)
+Removing: /Users/roope.rainisto/Library/Caches/Homebrew/libsamplerate--0.2.2... (2.7MB)
+Removing: /Users/roope.rainisto/Library/Caches/Homebrew/libsndfile_bottle_manifest--1.2.2_1... (17.4KB)
+Removing: /Users/roope.rainisto/Library/Caches/Homebrew/libsndfile--1.2.2_1... (614.5KB)
+Removing: /Users/roope.rainisto/Library/Caches/Homebrew/libsodium_bottle_manifest--1.0.20... (10.8KB)
+Removing: /Users/roope.rainisto/Library/Caches/Homebrew/libsodium--1.0.20... (306.3KB)
+Removing: /Users/roope.rainisto/Library/Caches/Homebrew/libsoxr_bottle_manifest--0.1.3-1... (15.3KB)
+Removing: /Users/roope.rainisto/Library/Caches/Homebrew/libsoxr--0.1.3... (77.9KB)
+Removing: /Users/roope.rainisto/Library/Caches/Homebrew/libssh_bottle_manifest--0.11.3... (12.1KB)
+Removing: /Users/roope.rainisto/Library/Caches/Homebrew/libssh--0.11.3... (539.3KB)
+Removing: /Users/roope.rainisto/Library/Caches/Homebrew/libtasn1_bottle_manifest--4.20.0... (10.1KB)
+Removing: /Users/roope.rainisto/Library/Caches/Homebrew/libtasn1--4.20.0... (166.8KB)
+Removing: /Users/roope.rainisto/Library/Caches/Homebrew/libtiff_bottle_manifest--4.7.1... (12.5KB)
+Removing: /Users/roope.rainisto/Library/Caches/Homebrew/libtiff--4.7.1... (1.9MB)
+Removing: /Users/roope.rainisto/Library/Caches/Homebrew/libudfread_bottle_manifest--1.2.0... (9.4KB)
+Removing: /Users/roope.rainisto/Library/Caches/Homebrew/libudfread--1.2.0... (43.4KB)
+Removing: /Users/roope.rainisto/Library/Caches/Homebrew/libunibreak_bottle_manifest--6.1... (10.8KB)
+Removing: /Users/roope.rainisto/Library/Caches/Homebrew/libunibreak--6.1... (65.4KB)
+Removing: /Users/roope.rainisto/Library/Caches/Homebrew/libunistring_bottle_manifest--1.4.1... (7.3KB)
+Removing: /Users/roope.rainisto/Library/Caches/Homebrew/libunistring--1.4.1... (1.9MB)
+Removing: /Users/roope.rainisto/Library/Caches/Homebrew/libuv_bottle_manifest--1.51.0-1... (9.6KB)
+Removing: /Users/roope.rainisto/Library/Caches/Homebrew/libuv--1.51.0... (369.3KB)
+Removing: /Users/roope.rainisto/Library/Caches/Homebrew/libvidstab_bottle_manifest--1.1.1... (12.5KB)
+Removing: /Users/roope.rainisto/Library/Caches/Homebrew/libvidstab--1.1.1... (47.2KB)
+Removing: /Users/roope.rainisto/Library/Caches/Homebrew/libvmaf_bottle_manifest--3.0.0-1... (11.8KB)
+Removing: /Users/roope.rainisto/Library/Caches/Homebrew/libvmaf--3.0.0... (1MB)
+Removing: /Users/roope.rainisto/Library/Caches/Homebrew/libvorbis_bottle_manifest--1.3.7-1... (14.2KB)
+Removing: /Users/roope.rainisto/Library/Caches/Homebrew/libvorbis--1.3.7... (589.2KB)
+Removing: /Users/roope.rainisto/Library/Caches/Homebrew/libvpx_bottle_manifest--1.15.2... (9.4KB)
+Removing: /Users/roope.rainisto/Library/Caches/Homebrew/libvpx--1.15.2... (1.9MB)
+Removing: /Users/roope.rainisto/Library/Caches/Homebrew/libx11_bottle_manifest--1.8.12... (18.3KB)
+Removing: /Users/roope.rainisto/Library/Caches/Homebrew/libx11--1.8.12... (2.3MB)
+Removing: /Users/roope.rainisto/Library/Caches/Homebrew/libxau_bottle_manifest--1.0.12... (10.3KB)
+Removing: /Users/roope.rainisto/Library/Caches/Homebrew/libxau--1.0.12... (33.4KB)
+Removing: /Users/roope.rainisto/Library/Caches/Homebrew/libxcb_bottle_manifest--1.17.0-1... (19.2KB)
+Removing: /Users/roope.rainisto/Library/Caches/Homebrew/libxcb--1.17.0... (999.8KB)
+Removing: /Users/roope.rainisto/Library/Caches/Homebrew/libxdmcp_bottle_manifest--1.1.5... (12.0KB)
+Removing: /Users/roope.rainisto/Library/Caches/Homebrew/libxdmcp--1.1.5... (36.8KB)
+Removing: /Users/roope.rainisto/Library/Caches/Homebrew/libxext_bottle_manifest--1.3.6... (16.8KB)
+Removing: /Users/roope.rainisto/Library/Caches/Homebrew/libxext--1.3.6... (108.4KB)
+Removing: /Users/roope.rainisto/Library/Caches/Homebrew/libxrender_bottle_manifest--0.9.12... (14.2KB)
+Removing: /Users/roope.rainisto/Library/Caches/Homebrew/libxrender--0.9.12... (54.6KB)
+Removing: /Users/roope.rainisto/Library/Caches/Homebrew/little-cms2_bottle_manifest--2.17... (15KB)
+Removing: /Users/roope.rainisto/Library/Caches/Homebrew/little-cms2--2.17... (433.3KB)
+Removing: /Users/roope.rainisto/Library/Caches/Homebrew/lz4_bottle_manifest--1.10.0-1... (13.8KB)
+Removing: /Users/roope.rainisto/Library/Caches/Homebrew/lz4--1.10.0... (279.7KB)
+Removing: /Users/roope.rainisto/Library/Caches/Homebrew/lzo_bottle_manifest--2.10... (16.7KB)
+Removing: /Users/roope.rainisto/Library/Caches/Homebrew/lzo--2.10... (149.6KB)
+Removing: /Users/roope.rainisto/Library/Caches/Homebrew/mpdecimal_bottle_manifest--4.0.1... (11.9KB)
+Removing: /Users/roope.rainisto/Library/Caches/Homebrew/mpdecimal--4.0.1... (186.2KB)
+Removing: /Users/roope.rainisto/Library/Caches/Homebrew/mpg123_bottle_manifest--1.33.3... (8.3KB)
+Removing: /Users/roope.rainisto/Library/Caches/Homebrew/mpg123--1.33.3... (648.5KB)
+Removing: /Users/roope.rainisto/Library/Caches/Homebrew/nettle_bottle_manifest--3.10.2... (11.9KB)
+Removing: /Users/roope.rainisto/Library/Caches/Homebrew/nettle--3.10.2... (987.6KB)
+Removing: /Users/roope.rainisto/Library/Caches/Homebrew/opencore-amr_bottle_manifest--0.1.6... (13.9KB)
+Removing: /Users/roope.rainisto/Library/Caches/Homebrew/opencore-amr--0.1.6... (304.9KB)
+Removing: /Users/roope.rainisto/Library/Caches/Homebrew/openjpeg_bottle_manifest--2.5.4... (14.0KB)
+Removing: /Users/roope.rainisto/Library/Caches/Homebrew/openjpeg--2.5.4... (2.2MB)
+Removing: /Users/roope.rainisto/Library/Caches/Homebrew/openssl@3_bottle_manifest--3.6.0... (11.8KB)
+Removing: /Users/roope.rainisto/Library/Caches/Homebrew/openssl@3--3.6.0... (10.9MB)
+Removing: /Users/roope.rainisto/Library/Caches/Homebrew/opus_bottle_manifest--1.5.2... (10.7KB)
+Removing: /Users/roope.rainisto/Library/Caches/Homebrew/opus--1.5.2... (484.8KB)
+Removing: /Users/roope.rainisto/Library/Caches/Homebrew/p11-kit_bottle_manifest--0.25.10... (9.9KB)
+Removing: /Users/roope.rainisto/Library/Caches/Homebrew/p11-kit--0.25.10... (938.5KB)
+Removing: /Users/roope.rainisto/Library/Caches/Homebrew/pango_bottle_manifest--1.57.0_1... (31.5KB)
+Removing: /Users/roope.rainisto/Library/Caches/Homebrew/pango--1.57.0_1... (886.2KB)
+Removing: /Users/roope.rainisto/Library/Caches/Homebrew/pcre2_bottle_manifest--10.47... (10.4KB)
+Removing: /Users/roope.rainisto/Library/Caches/Homebrew/pcre2--10.47... (2.4MB)
+Removing: /Users/roope.rainisto/Library/Caches/Homebrew/pixman_bottle_manifest--0.46.4-1... (9.3KB)
+Removing: /Users/roope.rainisto/Library/Caches/Homebrew/pixman--0.46.4... (416.2KB)
+Removing: /Users/roope.rainisto/Library/Caches/Homebrew/popt_bottle_manifest--1.19... (13.3KB)
+Removing: /Users/roope.rainisto/Library/Caches/Homebrew/popt--1.19... (59.5KB)
+Removing: /Users/roope.rainisto/Library/Caches/Homebrew/rav1e_bottle_manifest--0.8.1... (9.8KB)
+Removing: /Users/roope.rainisto/Library/Caches/Homebrew/rav1e--0.8.1... (13.2MB)
+Removing: /opt/homebrew/Cellar/readline/8.3.1... (56 files, 2.7MB)
+Removing: /Users/roope.rainisto/Library/Caches/Homebrew/readline_bottle_manifest--8.3.1... (12.3KB)
+Removing: /Users/roope.rainisto/Library/Caches/Homebrew/readline--8.3.1... (757.7KB)
+Removing: /Users/roope.rainisto/Library/Caches/Homebrew/rsync_bottle_manifest--3.4.1... (16.9KB)
+Removing: /Users/roope.rainisto/Library/Caches/Homebrew/rsync--3.4.1... (414.5KB)
+Removing: /Users/roope.rainisto/Library/Caches/Homebrew/rubberband_bottle_manifest--4.0.0... (23.4KB)
+Removing: /Users/roope.rainisto/Library/Caches/Homebrew/rubberband--4.0.0... (630.6KB)
+Removing: /Users/roope.rainisto/Library/Caches/Homebrew/sdl2_bottle_manifest--2.32.10... (23.0KB)
+Removing: /Users/roope.rainisto/Library/Caches/Homebrew/sdl2--2.32.10... (1.8MB)
+Removing: /Users/roope.rainisto/Library/Caches/Homebrew/snappy_bottle_manifest--1.2.2... (9.2KB)
+Removing: /Users/roope.rainisto/Library/Caches/Homebrew/snappy--1.2.2... (47.0KB)
+Removing: /Users/roope.rainisto/Library/Caches/Homebrew/speex_bottle_manifest--1.2.1... (14.6KB)
+Removing: /Users/roope.rainisto/Library/Caches/Homebrew/speex--1.2.1... (550.8KB)
+Removing: /Users/roope.rainisto/Library/Caches/Homebrew/srt_bottle_manifest--1.5.4... (12.5KB)
+Removing: /Users/roope.rainisto/Library/Caches/Homebrew/srt--1.5.4... (1.7MB)
+Removing: /Users/roope.rainisto/Library/Caches/Homebrew/svt-av1_bottle_manifest--3.1.2... (9.8KB)
+Removing: /Users/roope.rainisto/Library/Caches/Homebrew/svt-av1--3.1.2... (1.4MB)
+Removing: /Users/roope.rainisto/Library/Caches/Homebrew/theora_bottle_manifest--1.2.0... (12KB)
+Removing: /Users/roope.rainisto/Library/Caches/Homebrew/theora--1.2.0... (752.7KB)
+Removing: /Users/roope.rainisto/Library/Caches/Homebrew/uvwasi_bottle_manifest--0.0.23-1... (8.3KB)
+Removing: /Users/roope.rainisto/Library/Caches/Homebrew/uvwasi--0.0.23... (70.0KB)
+Removing: /Users/roope.rainisto/Library/Caches/Homebrew/webp_bottle_manifest--1.6.0... (19.5KB)
+Removing: /Users/roope.rainisto/Library/Caches/Homebrew/webp--1.6.0... (901.9KB)
+Removing: /Users/roope.rainisto/Library/Caches/Homebrew/x264_bottle_manifest--r3222... (9.8KB)
+Removing: /Users/roope.rainisto/Library/Caches/Homebrew/x264--r3222... (2MB)
+Removing: /Users/roope.rainisto/Library/Caches/Homebrew/x265_bottle_manifest--4.1-1... (9.8KB)
+Removing: /Users/roope.rainisto/Library/Caches/Homebrew/x265--4.1... (3.9MB)
+Removing: /Users/roope.rainisto/Library/Caches/Homebrew/xorgproto_bottle_manifest--2024.1... (20.6KB)
+Removing: /Users/roope.rainisto/Library/Caches/Homebrew/xorgproto--2024.1... (717.1KB)
+Removing: /Users/roope.rainisto/Library/Caches/Homebrew/xvid_bottle_manifest--1.3.7... (14.1KB)
+Removing: /Users/roope.rainisto/Library/Caches/Homebrew/xvid--1.3.7... (433.7KB)
+Removing: /Users/roope.rainisto/Library/Caches/Homebrew/xxhash_bottle_manifest--0.8.3... (10.4KB)
+Removing: /Users/roope.rainisto/Library/Caches/Homebrew/xxhash--0.8.3... (149.6KB)
+Removing: /opt/homebrew/Cellar/xz/5.8.1... (96 files, 2.6MB)
+Removing: /Users/roope.rainisto/Library/Caches/Homebrew/xz_bottle_manifest--5.8.1... (14.5KB)
+Removing: /Users/roope.rainisto/Library/Caches/Homebrew/xz--5.8.1... (746.8KB)
+Removing: /Users/roope.rainisto/Library/Caches/Homebrew/zeromq_bottle_manifest--4.3.5_2... (11KB)
+Removing: /Users/roope.rainisto/Library/Caches/Homebrew/zeromq--4.3.5_2... (1.7MB)
+Removing: /Users/roope.rainisto/Library/Caches/Homebrew/zimg_bottle_manifest--3.0.6... (9.4KB)
+Removing: /Users/roope.rainisto/Library/Caches/Homebrew/zimg--3.0.6... (353.1KB)
+Removing: /Users/roope.rainisto/Library/Caches/Homebrew/zstd_bottle_manifest--1.5.7-1... (16.2KB)
+Removing: /Users/roope.rainisto/Library/Caches/Homebrew/zstd--1.5.7... (793.5KB)
+Removing: /Users/roope.rainisto/Library/Caches/Homebrew/portable-ruby-3.4.8.arm64_big_sur.bottle.tar.gz... (12.2MB)
+Removing: /Users/roope.rainisto/Library/Caches/Homebrew/bootsnap/2e654ee727608e789627b1650a5578555b79999f32c649f5867e41c3bd6a9883... (650 files, 5.7MB)
+Removing: /Users/roope.rainisto/Library/Caches/Homebrew/bootsnap/684c26d8211c6bacd91f8187e94767537f4d3bb555c2f7d7d582cc7ad2221890... (647 files, 5.7MB)
+Removing: /Users/roope.rainisto/Library/Logs/Homebrew/python@3.14... (64B)
+Removing: /Users/roope.rainisto/Library/Logs/Homebrew/readline... (64B)
+Removing: /Users/roope.rainisto/Library/Logs/Homebrew/sqlite... (64B)
+Removing: /Users/roope.rainisto/Library/Logs/Homebrew/xz... (64B)
+Removing: /Users/roope.rainisto/Library/Logs/Homebrew/certifi... (64B)
+Removing: /Users/roope.rainisto/Library/Logs/Homebrew/bpython... (64B)
+
+==> Ensuring nvm loads in your shell profile
+
+==> Installing Node version from .nvmrc
+Found '/Users/roope.rainisto/Documents/gamejam/.nvmrc' with version <22>
+Downloading and installing node v22.22.0...
+Downloading https://nodejs.org/dist/v22.22.0/node-v22.22.0-darwin-arm64.tar.xz...
+################                                                                                                                                                                   9.3%################################################################                                                                                                                  36.6%####################################################################################################################                                                              66.3%######################################################################################################################################                                            76.5%##################################################################################################################################################                                83.3%################################################################################################################################################################################ 100.0%
+Computing checksum with sha256sum
+Checksums matched!
+Now using node v22.22.0 (npm v11.6.2)
+Found '/Users/roope.rainisto/Documents/gamejam/.nvmrc' with version <22>
+Now using node v22.22.0 (npm v11.6.2)
+
+==> Running shared post-setup checks
+./setup.sh: line 235: FORWARD_ARGS[@]: unbound variable
+
+==> Setup started
+Log file: /Users/roope.rainisto/Documents/gamejam/setup.log
+
+==> Checking network connectivity
+
+==> Checking Xcode Command Line Tools
+
+==> Checking Homebrew
+
+==> Installing nvm
+
+==> Ensuring nvm loads in your shell profile
+
+==> Installing Node version from .nvmrc
+Found '/Users/roope.rainisto/Documents/gamejam/.nvmrc' with version <22>
+v22.22.0 is already installed.
+Now using node v22.22.0 (npm v11.6.2)
+Found '/Users/roope.rainisto/Documents/gamejam/.nvmrc' with version <22>
+Now using node v22.22.0 (npm v11.6.2)
+
+==> Running shared post-setup checks
+
+==> Validating Node.js version
+
+==> Printing tool versions
+Node: v25.2.1
+npm:  11.6.2
+⚠️  package.json is newer than package-lock.json. If npm ci fails, run 'npm install' to update the lockfile.
+
+==> Installing npm dependencies
+
+added 79 packages, and audited 80 packages in 7s
+
+14 packages are looking for funding
+  run `npm fund` for details
+
+4 vulnerabilities (3 moderate, 1 high)
+
+To address all issues, run:
+  npm audit fix
+
+Run `npm audit` for details.
+
+==> Setup complete
+Next: run "npm run dev" and open http://localhost:5173
+
+==> Setup started
+Log file: /Users/michaelgump/hectic-hospital/setup.log
+
+==> Checking network connectivity
+
+==> Checking npm prefix conflicts
+
+==> Checking Xcode Command Line Tools
+
+==> Checking Homebrew
+
+==> Installing nvm
+==> Fetching downloads for: nvm
+✔︎ Bottle Manifest nvm (0.40.4)
+✔︎ Bottle nvm (0.40.4)
+==> Pouring nvm--0.40.4.all.bottle.tar.gz
+==> Caveats
+Please note that upstream has asked us to make explicit managing
+nvm via Homebrew is unsupported by them and you should check any
+problems against the standard nvm install method prior to reporting.
+
+You should create NVM's working directory if it doesn't exist:
+  mkdir ~/.nvm
+
+Add the following to your shell profile e.g. ~/.profile or ~/.zshrc:
+  export NVM_DIR="$HOME/.nvm"
+  [ -s "/opt/homebrew/opt/nvm/nvm.sh" ] && \. "/opt/homebrew/opt/nvm/nvm.sh"  # This loads nvm
+  [ -s "/opt/homebrew/opt/nvm/etc/bash_completion.d/nvm" ] && \. "/opt/homebrew/opt/nvm/etc/bash_completion.d/nvm"  # This loads nvm bash_completion
+
+You can set $NVM_DIR to any location, but leaving it unchanged from
+/opt/homebrew/Cellar/nvm/0.40.4 will destroy any nvm-installed Node installations
+upon upgrade/reinstall.
+
+Type `nvm help` for further information.
+==> Summary
+🍺  /opt/homebrew/Cellar/nvm/0.40.4: 10 files, 214.4KB
